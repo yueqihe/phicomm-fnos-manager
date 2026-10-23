@@ -1,0 +1,96 @@
+#!/bin/bash
+set -euo pipefail
+source "$(dirname "$(readlink -f "$0")")/common"
+require_paths
+
+read_pid() {
+    [ -r "$PID_FILE" ] || return 1
+    IFS= read -r APP_PID < "$PID_FILE" || return 1
+    [[ "$APP_PID" =~ ^[1-9][0-9]*$ ]] || return 1
+}
+
+owns_process() {
+    read_pid || return 1
+    kill -0 "$APP_PID" 2>/dev/null || return 1
+    [ -r "/proc/$APP_PID/cmdline" ] || return 1
+    local args=()
+    mapfile -d '' -t args < "/proc/$APP_PID/cmdline"
+    [ "${args[0]:-}" = "$SERVICE_ENTRY" ]
+}
+
+status_app() {
+    owns_process || return 1
+}
+
+rotate_log() {
+    if [ -f "$LOG_FILE" ] && [ "$(stat -c %s "$LOG_FILE")" -gt 5242880 ]; then
+        mv -f "$LOG_FILE" "$LOG_FILE.1"
+    fi
+}
+
+start_app() {
+    status_app && return 0
+    runtime
+    rotate_log
+    # Reused PID files must never cause another process to be killed.
+    rm -f "$PID_FILE"
+    if [ -e "$SOCKET_FILE" ] || [ -S "$SOCKET_FILE" ]; then
+        [ -S "$SOCKET_FILE" ] || fail "应用 Socket 路径被其他文件占用。"
+        # Only remove a confirmed abandoned socket; a live unmanaged process is an error.
+        if ! "$SERVICE_ENTRY" --socket-abandoned "$SOCKET_FILE"; then
+            fail "应用 Socket 仍被使用或不可访问，请检查已有进程。"
+        fi
+        rm -f "$SOCKET_FILE"
+    fi
+    initialize
+    (
+        unset wizard_admin_password MANAGER_ADMIN_PASSWORD
+        export MANAGER_DATA_DIR="$TRIM_PKGVAR/data"
+        export MANAGER_BASE_PATH="/app/phicomm-manager"
+        export MANAGER_SOCKET="$SOCKET_FILE"
+        cd "$APP_DIR"
+        exec "$SERVICE_ENTRY"
+    ) >> "$LOG_FILE" 2>&1 < /dev/null &
+    APP_PID=$!
+    printf '%s\n' "$APP_PID" > "$PID_FILE"
+    for attempt in {1..40}; do
+        if ! owns_process; then
+            # The child can be in exec briefly; wait one interval before declaring failure.
+            if ! kill -0 "$APP_PID" 2>/dev/null; then
+                rm -f "$PID_FILE"
+                fail "服务启动失败，请查看应用数据目录中的 app.log。"
+            fi
+        elif "$SERVICE_ENTRY" --socket-ready "$SOCKET_FILE" >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 0.25
+    done
+    stop_app
+    fail "服务未在预期时间内就绪，请查看 app.log。"
+}
+
+stop_app() {
+    if ! owns_process; then
+        rm -f "$PID_FILE"
+        return 0
+    fi
+    kill -TERM "$APP_PID"
+    for attempt in {1..80}; do
+        if ! owns_process; then
+            rm -f "$PID_FILE"
+            [ ! -S "$SOCKET_FILE" ] || rm -f "$SOCKET_FILE"
+            return 0
+        fi
+        sleep 0.25
+    done
+    if owns_process; then kill -KILL "$APP_PID"; fi
+    rm -f "$PID_FILE"
+    [ ! -S "$SOCKET_FILE" ] || rm -f "$SOCKET_FILE"
+}
+
+case "${1:-}" in
+    start) start_app ;;
+    stop) stop_app ;;
+    status) if status_app; then exit 0; else exit 3; fi ;;
+    *) exit 1 ;;
+esac

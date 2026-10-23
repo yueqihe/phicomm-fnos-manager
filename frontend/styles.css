@@ -1,0 +1,310 @@
+
+#manager{--pm-bg:#f5f6f8;--pm-paper:#ffffff;--pm-ink:#20242b;--pm-muted:#737b88;--pm-line:#e5e7ec;--pm-accent:#d92d3d;--pm-tint:#fff4f4;--pm-green:#388066;--pm-radius:6px;font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:var(--pm-ink);font-size:14px;line-height:1.5;color-scheme:light;container:pm-manager / inline-size}
+#manager *{box-sizing:border-box}
+#manager [hidden]{display:none!important}
+#manager button,#manager input,#manager select{font:inherit}
+#manager button{cursor:var(--cursor-interaction,pointer)}
+#manager button:disabled{cursor:not-allowed;opacity:.42}
+#manager button:focus-visible,#manager input:focus-visible,#manager select:focus-visible{outline:2px solid var(--pm-accent);outline-offset:3px}
+#manager .pm-app{position:relative;min-height:820px;background:var(--pm-bg);overflow:clip;border:1px solid var(--pm-line);border-radius:9px}
+#manager .pm-top{display:flex;align-items:center;gap:28px;min-height:86px;padding:16px 28px;border-bottom:1px solid var(--pm-line);background:var(--pm-paper)}
+#manager .pm-brand{display:flex;align-items:center;gap:10px;white-space:nowrap;font-size:16px;font-weight:650;letter-spacing:-.4px}
+#manager .pm-brandmark{width:29px;height:29px;display:grid;place-items:center;background:var(--pm-ink);color:var(--pm-paper);border-radius:7px}
+#manager svg{width:17px;height:17px;flex-shrink:0;stroke-width:1.6}
+#manager .pm-nav{position:relative;padding:0 1px;border:0;background:transparent;color:var(--pm-muted);white-space:nowrap}
+#manager .pm-header-summary{flex:1;min-width:0}
+#manager .pm-header-services{margin-left:auto;display:flex;align-items:center;gap:18px}
+#manager .pm-connection-status{display:inline-flex;align-items:center;gap:6px;min-height:32px;padding:4px 0;border:0;background:transparent;color:var(--pm-muted);font-size:11px;white-space:nowrap}
+#manager .pm-connection-status:hover{color:var(--pm-ink)}
+#manager .pm-connection-count{color:var(--pm-ink);font-variant-numeric:tabular-nums}
+#manager .pm-top-actions{display:flex;align-items:center;gap:6px}
+#manager .pm-utility{display:grid;place-items:center;width:34px;min-height:34px;padding:0;border-radius:4px;flex-shrink:0}
+#manager .pm-utility:hover{background:var(--pm-bg);color:var(--pm-ink)}
+#manager .pm-content{padding:28px}
+#manager h1,#manager h2,#manager h3,#manager p{margin:0}
+#manager .pm-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;border:1px solid var(--pm-line);border-radius:4px;background:var(--pm-paper);color:var(--pm-ink);padding:7px 12px;white-space:nowrap;transition:background .15s}
+#manager .pm-btn:hover{background:var(--pm-bg)}
+#manager .pm-btn-primary{background:var(--pm-accent);border-color:var(--pm-accent);color:#fff}
+#manager .pm-btn-primary:hover{background:var(--pm-accent);filter:brightness(.94)}
+#manager .pm-stats{display:flex;align-items:center}
+#manager .pm-stat{min-width:83px;padding:0 18px;border-right:1px solid var(--pm-line)}
+#manager .pm-stat:first-child{padding-left:0}
+#manager .pm-stat:nth-child(3){border:0}
+#manager .pm-stat-label{font-size:11px;color:var(--pm-muted);display:block;margin-bottom:3px}
+#manager .pm-stat-value{font:22px/1.2 "Segoe UI",sans-serif;font-weight:350;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+#manager .pm-stat-value small{color:var(--pm-muted);font-size:11px;letter-spacing:0;margin-left:4px}
+#manager .pm-device-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+#manager .pm-device-toolbar .pm-filterbar{padding:0;border:0;flex-wrap:wrap}
+#manager .pm-view-switch{display:flex;gap:3px;padding:3px;margin-left:auto;background:var(--pm-paper);border:1px solid var(--pm-line);border-radius:5px;flex-shrink:0}
+#manager .pm-view-option{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-width:78px;min-height:30px;padding:5px 10px;border:0;border-radius:3px;background:transparent;color:var(--pm-muted);font-size:12px}
+#manager .pm-view-option[aria-pressed="true"]{background:var(--pm-tint);color:var(--pm-accent)}
+#manager .pm-view-option svg{width:14px;height:14px}
+#manager .pm-add-inline{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;min-height:42px;padding:11px 16px;background:transparent;color:var(--pm-muted);border:0;font-size:12px}
+#manager .pm-add-inline:hover{color:var(--pm-accent);background:var(--pm-tint)}
+#manager .pm-list-panel{display:flex;flex-direction:column}
+#manager .pm-list-panel .pm-device-list{flex:1}
+#manager .pm-list-panel .pm-add-inline{border-top:1px solid var(--pm-line);border-radius:0 0 var(--pm-radius) var(--pm-radius)}
+#manager .pm-room-add{margin-top:16px;border:1px dashed var(--pm-line);border-radius:var(--pm-radius)}
+#manager .pm-dot{display:inline-block;width:6px;height:6px;flex-shrink:0;border-radius:50%;background:var(--pm-green)}
+#manager .pm-dot-off{background:#a7adb7}
+#manager .pm-workspace{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(290px,1fr);gap:20px;align-items:stretch}
+#manager .pm-panel{background:var(--pm-paper);border:1px solid var(--pm-line);border-radius:var(--pm-radius);min-width:0}
+#manager .pm-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:16px 20px;border-bottom:1px solid var(--pm-line)}
+#manager .pm-panel-title{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600}
+#manager .pm-index{font:10px Consolas,monospace;color:var(--pm-accent)}
+#manager .pm-quiet{font-size:11px;color:var(--pm-muted)}
+#manager .pm-filterbar{padding:14px 20px;display:flex;align-items:center;gap:5px;border-bottom:1px solid var(--pm-line)}
+#manager .pm-filter{border:0;background:transparent;color:var(--pm-muted);border-radius:3px;padding:5px 10px;font-size:11px;min-height:30px}
+#manager .pm-filter[aria-pressed="true"]{color:var(--pm-accent);background:var(--pm-tint)}
+#manager .pm-row{display:grid;grid-template-columns:39px minmax(0,1fr) auto;gap:13px;align-items:center;position:relative;width:100%;min-height:94px;text-align:left;border:0;border-bottom:1px solid var(--pm-line);padding:17px 20px;background:var(--pm-paper);color:var(--pm-ink)}
+#manager .pm-row:last-child{border-bottom:0}
+#manager .pm-row:hover{background:#fafbfc}
+#manager .pm-row[aria-pressed="true"]{background:var(--pm-tint)}
+#manager .pm-row[aria-pressed="true"]:before{content:"";position:absolute;left:0;top:22px;bottom:22px;width:2px;background:var(--pm-accent)}
+#manager .pm-device-icon{width:39px;height:39px;display:grid;place-items:center;color:#616a77;background:#f3f4f6;border-radius:8px}
+#manager .pm-row[aria-pressed="true"] .pm-device-icon{background:#fce6e8;color:var(--pm-accent)}
+#manager .pm-device-icon svg{width:21px;height:21px}
+#manager .pm-device-name{font-weight:550;font-size:13px;display:block;overflow-wrap:anywhere}
+#manager .pm-device-meta{display:flex;align-items:center;gap:6px;color:var(--pm-muted);font-size:10px;margin-top:7px;flex-wrap:wrap}
+#manager .pm-separator{color:#c6cad1;padding:0 2px}
+#manager .pm-device-reading{text-align:right;white-space:nowrap;font-size:17px;font-weight:400;font-variant-numeric:tabular-nums}
+#manager .pm-device-reading small{font-size:10px;color:var(--pm-muted);margin-left:3px}
+#manager .pm-reading-caption{display:block;font-size:10px;color:var(--pm-muted);margin-top:5px;font-weight:400}
+#manager .pm-detail{padding:20px}
+#manager .pm-detail-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:22px}
+#manager .pm-detail-name{font-size:18px;font-weight:550;letter-spacing:-.5px;overflow-wrap:anywhere}
+#manager .pm-status{display:flex;align-items:center;gap:6px;color:var(--pm-muted);font-size:11px}
+#manager .pm-statusline{display:flex;align-items:center;gap:6px;margin-top:7px;color:var(--pm-muted);font-size:11px;flex-wrap:wrap}
+#manager .pm-toggle{position:relative;width:37px;min-height:23px;border:0;border-radius:20px;background:#dfe2e8;padding:3px;flex-shrink:0}
+#manager .pm-toggle:after{content:"";display:block;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #00000015;transform:translateX(0);transition:transform .15s}
+#manager .pm-toggle[aria-checked="true"]{background:var(--pm-accent)}
+#manager .pm-toggle[aria-checked="true"]:after{transform:translateX(14px)}
+#manager .pm-measurements{display:grid;grid-template-columns:1fr 1fr;gap:15px;padding-bottom:19px;margin-bottom:15px;border-bottom:1px solid var(--pm-line)}
+#manager .pm-metric-label{font-size:10px;color:var(--pm-muted);display:block;margin-bottom:5px}
+#manager .pm-metric-value{font-size:25px;line-height:1.25;font-weight:350;letter-spacing:-.6px;font-variant-numeric:tabular-nums}
+#manager .pm-metric-value small{font-size:11px;color:var(--pm-muted);letter-spacing:0;margin-left:3px}
+#manager .pm-metric-note{display:block;margin-top:8px;font-size:11px;line-height:1.65;color:var(--pm-muted);overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+#manager .pm-price-link{padding:0;border:0;background:transparent;text-align:left}
+#manager .pm-price-link:hover{color:var(--pm-accent)}
+#manager .pm-billing-period{display:block;margin-top:2px;font-size:10px}
+#manager .pm-tariff-fields{border:0;padding:0;margin:0;min-width:0}
+#manager .pm-time-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+#manager .pm-time-fields .pm-input{min-width:0}
+#manager .pm-tariff-help{margin-top:17px}
+#manager .pm-section-label{font-size:11px;color:var(--pm-muted);display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+#manager .pm-outlets{display:grid;grid-template-columns:1fr 1fr;column-gap:19px}
+#manager .pm-outlet{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:11px 0;border-bottom:1px solid var(--pm-line)}
+#manager .pm-outlet-name{font-size:11px;display:block}
+#manager .pm-outlet-id{font:9px Consolas,monospace;color:var(--pm-muted);display:block;margin-top:3px}
+#manager .pm-detail-connection{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:19px;font-size:10px;color:var(--pm-muted)}
+#manager .pm-text-action{border:0;background:transparent;color:var(--pm-muted);padding:4px 0;font-size:10px;display:inline-flex;align-items:center;gap:4px}
+#manager .pm-text-action:hover{color:var(--pm-accent)}
+#manager .pm-text-action svg{width:12px;height:12px}
+#manager .pm-range{width:100%;accent-color:var(--pm-accent);min-height:30px;display:block;margin:6px 0}
+#manager .pm-range-label{display:flex;align-items:center;justify-content:space-between;font-size:11px;margin:17px 0 4px}
+#manager .pm-range-number{font:23px "Segoe UI",sans-serif;font-weight:350}
+#manager .pm-range-number small{font-size:11px;color:var(--pm-muted)}
+#manager .pm-range-ends{display:flex;justify-content:space-between;color:var(--pm-muted);font-size:10px;margin-top:0}
+#manager .pm-modes{display:flex;gap:7px;margin:11px 0 20px}
+#manager .pm-mode{flex:1;padding:8px;border:1px solid var(--pm-line);border-radius:3px;background:var(--pm-paper);color:var(--pm-muted);font-size:11px}
+#manager .pm-mode[aria-pressed="true"]{color:var(--pm-accent);border-color:#efbac0;background:var(--pm-tint)}
+#manager .pm-info-row{padding:12px 0;border-bottom:1px solid var(--pm-line);display:flex;align-items:center;justify-content:space-between;font-size:11px}
+#manager .pm-info-row span{color:var(--pm-muted)}
+#manager .pm-info-row strong{font-weight:500}
+#manager .pm-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:20px;color:var(--pm-muted);font-size:10px}
+#manager .pm-bottom span{display:flex;align-items:center;gap:6px}
+#manager .pm-bottom svg{width:12px;height:12px}
+#manager .pm-empty{padding:72px 24px;text-align:center;color:var(--pm-muted);font-size:12px}
+#manager .pm-offline-message{padding:28px 0;color:var(--pm-muted);font-size:12px;line-height:1.8}
+#manager .pm-settings-tabs{display:flex;gap:24px;padding:0 22px;border-bottom:1px solid var(--pm-line);flex-shrink:0}
+#manager .pm-settings-tab{position:relative;min-height:45px;padding:0;border:0;background:transparent;color:var(--pm-muted);font-size:12px}
+#manager .pm-settings-tab[aria-pressed="true"]{color:var(--pm-ink);font-weight:550}
+#manager .pm-settings-tab[aria-pressed="true"]:after{content:"";position:absolute;height:2px;bottom:-1px;left:0;right:0;background:var(--pm-accent)}
+#manager .pm-config-identity{display:flex;justify-content:space-between;gap:12px;padding:0 0 18px;margin-bottom:18px;border-bottom:1px solid var(--pm-line);font-size:11px;color:var(--pm-muted);flex-wrap:wrap}
+#manager .pm-config-section{padding-top:1px}
+#manager .pm-config-section h3{font-size:12px;font-weight:550;margin-bottom:15px}
+#manager .pm-config-section+.pm-config-section{padding-top:20px;margin-top:20px;border-top:1px solid var(--pm-line)}
+#manager .pm-config-summary{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:12px;margin-bottom:8px;flex-wrap:wrap}
+#manager .pm-check{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--pm-muted);margin:-4px 0 17px}
+#manager .pm-check input{accent-color:var(--pm-accent);width:16px;height:16px;margin:0}
+#manager .pm-save-status{color:var(--pm-green);font-size:11px;margin-right:auto;align-self:center}
+#manager .pm-field{display:grid;gap:7px;margin-bottom:17px;font-size:12px}
+#manager .pm-field>span{color:var(--pm-muted);font-size:11px}
+#manager .pm-input{width:100%;padding:10px 11px;border:1px solid var(--pm-line);background:var(--pm-paper);color:var(--pm-ink);border-radius:4px;min-height:39px;font-size:12px}
+#manager .pm-help{color:var(--pm-muted);font-size:11px;line-height:1.9}
+#manager .pm-activity{padding:0 22px}
+#manager .pm-event{display:grid;grid-template-columns:65px 1fr auto;gap:15px;align-items:center;border-bottom:1px solid var(--pm-line);padding:19px 0;font-size:12px}
+#manager .pm-event:last-child{border-bottom:0}
+#manager .pm-event time{font:11px Consolas,monospace;color:var(--pm-muted)}
+#manager .pm-room-header{display:flex;align-items:center;gap:9px;padding:18px 0 12px;font-size:12px}
+#manager .pm-room-header span{font-size:10px;color:var(--pm-muted)}
+#manager .pm-room-header:first-child{padding-top:0}
+#manager .pm-room-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px;margin-bottom:7px}
+#manager .pm-room-item{min-width:0}
+#manager .pm-mobile-picker{display:none}
+#manager .pm-tile{min-height:205px;display:flex;flex-direction:column}
+#manager .pm-tile-open{display:flex;flex-direction:column;gap:14px;flex:1;width:100%;padding:20px 20px 14px;border:0;border-radius:var(--pm-radius) var(--pm-radius) 0 0;background:transparent;color:inherit;text-align:left}
+#manager .pm-tile-open:hover{background:#fafbfc}
+#manager .pm-tile-open:hover .pm-device-icon{background:var(--pm-tint);color:var(--pm-accent)}
+#manager .pm-tile-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#manager .pm-tile-info{display:block}
+#manager .pm-tile-name{display:block;font-size:14px;font-weight:550}
+#manager .pm-tile-value{font-size:29px;letter-spacing:-.7px;font-weight:350}
+#manager .pm-tile-value small{font-size:11px;color:var(--pm-muted);letter-spacing:0;margin-left:4px}
+#manager .pm-tile-bottom{display:flex;align-items:center;justify-content:space-between;min-height:34px;border-top:1px solid var(--pm-line);padding-top:10px;margin:0 20px 16px}
+#manager .pm-toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);padding:10px 16px;background:var(--pm-ink);color:#fff;border-radius:5px;font-size:12px;z-index:8;box-shadow:0 5px 18px #00000012;max-width:calc(100% - 30px);width:max-content;text-align:center}
+#manager dialog{width:min(420px,calc(100% - 24px));max-height:calc(100dvh - 24px);overflow:hidden;padding:0;border:1px solid var(--pm-line);border-radius:9px;background:var(--pm-paper);color:var(--pm-ink);box-shadow:0 20px 80px #13192424;position:absolute;inset:0;margin:auto}
+#manager dialog form{display:flex;flex-direction:column;max-height:calc(100dvh - 26px)}
+#manager .pm-dialog-head,#manager .pm-dialog-footer{flex-shrink:0}
+#manager dialog::backdrop{background:#20242b45}
+#manager .pm-dialog-head{padding:20px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--pm-line)}
+#manager .pm-dialog-head h2{font-size:17px;font-weight:550}
+#manager .pm-dialog-body{padding:22px;overflow-y:auto;min-height:0;overscroll-behavior:contain}
+#manager .pm-control-dialog{width:min(460px,calc(100% - 24px))}
+#manager .pm-control-dialog[open]{display:flex;flex-direction:column}
+#manager .pm-control-body{flex:1}
+#manager .pm-settings-dialog{width:min(560px,calc(100% - 24px))}
+#manager .pm-history-dialog{width:min(640px,calc(100% - 24px))}
+#manager .pm-settings-dialog[open],#manager .pm-history-dialog[open]{display:flex;flex-direction:column}
+#manager .pm-settings-dialog .pm-dialog-body,#manager .pm-history-dialog .pm-dialog-body{flex:1}
+#manager .pm-history-dialog .pm-activity{padding:0}
+#manager .pm-history-dialog .pm-dialog-body{padding-top:5px;padding-bottom:5px}
+#manager .pm-dialog-footer{display:flex;justify-content:flex-end;gap:9px;padding:16px 22px;border-top:1px solid var(--pm-line)}
+#manager .pm-icon-button{display:grid;place-items:center;min-height:30px;width:30px;padding:0;border:0;border-radius:4px;color:var(--pm-muted);background:transparent}
+#manager .pm-icon-button:hover{background:var(--pm-bg)}
+#manager .pm-error{font-size:11px;color:var(--pm-accent);margin-top:10px;min-height:17px}
+#manager .pm-mono{font-family:Consolas,"Microsoft YaHei",monospace;font-variant-numeric:tabular-nums}
+@container pm-manager (min-width:1300px){
+  #manager .pm-content{padding:32px 36px}
+  #manager .pm-row{min-height:105px}
+}
+@container pm-manager (max-width:900px){
+  #manager .pm-top{display:grid;grid-template-columns:minmax(0,1fr) auto;padding:16px 20px;gap:16px 20px}
+  #manager .pm-top-actions{grid-column:2;grid-row:1;justify-self:end}
+  #manager .pm-header-summary{grid-column:1;grid-row:2}
+  #manager .pm-header-services{grid-column:2;grid-row:2}
+  #manager .pm-content{padding:22px 20px}
+  #manager .pm-workspace{grid-template-columns:minmax(0,1.15fr) minmax(265px,1fr);gap:14px}
+  #manager .pm-stat{min-width:83px;padding:0 18px}
+  #manager .pm-row{padding:16px 14px;gap:9px;grid-template-columns:33px minmax(0,1fr) auto}
+  #manager .pm-device-icon{width:33px;height:35px}
+  #manager .pm-detail{padding:16px}
+  #manager .pm-room-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@container pm-manager (max-width:700px){
+  #manager .pm-top{min-height:0;padding:12px 16px 0;gap:14px 12px}
+  #manager .pm-brand{font-size:15px}
+  #manager .pm-nav{font-size:12px}
+  #manager .pm-top-actions{grid-column:2;grid-row:1}
+  #manager .pm-header-summary{grid-column:1/-1;grid-row:2}
+  #manager .pm-header-services{grid-column:1/-1;grid-row:3;gap:18px;margin:0;border-top:1px solid var(--pm-line)}
+  #manager .pm-connection-status{min-height:40px}
+  #manager .pm-content{padding:20px 16px}
+  #manager .pm-btn{min-height:40px;padding:8px 10px;font-size:12px}
+  #manager .pm-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  #manager .pm-stat{min-width:0;padding:0 14px}
+  #manager .pm-stat:first-child{padding-left:0}
+  #manager .pm-stat-value{font-size:22px}
+  #manager .pm-stat-value small{font-size:11px;margin-left:3px}
+  #manager .pm-device-toolbar{gap:10px;margin-bottom:18px}
+  #manager .pm-device-toolbar .pm-filterbar{flex-basis:100%;order:2}
+  #manager .pm-workspace{grid-template-columns:minmax(0,1fr);gap:16px}
+  #manager .pm-filterbar{padding:10px 12px;flex-wrap:wrap}
+  #manager .pm-filter{font-size:12px}
+  #manager .pm-panel-head{padding:14px 16px;min-height:54px}
+  #manager .pm-mobile-picker{display:grid;gap:7px;margin:14px 16px 18px;font-size:12px;color:var(--pm-muted)}
+  #manager .pm-device-list{display:none}
+  #manager .pm-detail{padding:18px 16px}
+  #manager .pm-detail-heading>div{min-width:0}
+  #manager .pm-measurements{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px}
+  #manager .pm-metric-value{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px}
+  #manager .pm-metric-value small{margin-left:0}
+  #manager .pm-metric-label,#manager .pm-range-ends,#manager .pm-bottom,#manager .pm-detail-connection{font-size:11px}
+  #manager .pm-outlets{column-gap:16px}
+  #manager .pm-outlet>span{min-width:0}
+  #manager .pm-outlet-name{font-size:12px;overflow-wrap:anywhere}
+  #manager .pm-outlet-id{font-size:11px}
+  #manager .pm-detail-connection{flex-wrap:wrap}
+  #manager .pm-mode,#manager .pm-range-label{font-size:12px}
+  #manager .pm-bottom{align-items:flex-start}
+  #manager .pm-room-grid{grid-template-columns:minmax(0,1fr);gap:18px}
+  #manager .pm-tile{min-height:0}
+  #manager .pm-tile-open{padding:15px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px}
+  #manager .pm-tile-head{grid-column:1/-1}
+  #manager .pm-tile-head .pm-device-icon{width:28px;height:28px}
+  #manager .pm-tile-name{font-size:13px;overflow-wrap:anywhere}
+  #manager .pm-tile-value{align-self:center;font-size:24px}
+  #manager .pm-tile-value small{font-size:11px}
+  #manager .pm-tile-bottom{margin:0 15px 12px}
+  #manager .pm-room-header{padding:0 0 10px}
+  #manager .pm-event{grid-template-columns:60px minmax(0,1fr);gap:8px}
+  #manager .pm-event>span{overflow-wrap:anywhere}
+  #manager .pm-event>span:last-child{grid-column:2}
+  #manager .pm-settings-dialog .pm-dialog-body{padding:18px 16px}
+  #manager .pm-settings-tabs{padding:0 16px}
+  #manager .pm-save-status{flex-basis:100%}
+  #manager .pm-settings-dialog .pm-dialog-footer{flex-wrap:wrap}
+  #manager .pm-input{font-size:16px;min-height:44px;min-width:0}
+}
+@media(pointer:coarse){
+  #manager .pm-btn,#manager .pm-filter,#manager .pm-mode,#manager .pm-text-action,#manager .pm-price-link,#manager .pm-nav,#manager .pm-connection-status{min-height:44px;min-width:44px}
+  #manager .pm-utility,#manager .pm-icon-button{width:44px;min-height:44px}
+  #manager .pm-input{font-size:16px;min-height:44px}
+  #manager .pm-range{min-height:44px}
+  #manager .pm-settings-tab,#manager .pm-check{min-height:44px}
+  #manager .pm-view-option,#manager .pm-add-inline{min-height:44px}
+  #manager .pm-toggle{width:44px;min-height:44px;padding:0;background:transparent}
+  #manager .pm-toggle:before{content:"";position:absolute;left:2px;top:50%;width:40px;height:24px;border-radius:20px;background:#dfe2e8;transform:translateY(-50%)}
+  #manager .pm-toggle:after{position:absolute;left:5px;top:50%;width:18px;height:18px;transform:translateY(-50%)}
+  #manager .pm-toggle[aria-checked="true"]{background:transparent}
+  #manager .pm-toggle[aria-checked="true"]:before{background:var(--pm-accent)}
+  #manager .pm-toggle[aria-checked="true"]:after{transform:translate(16px,-50%)}
+}
+@media(prefers-reduced-motion:reduce){#manager *{transition:none!important}}
+
+html,body{margin:0;min-height:100%;background:#f5f6f8}
+#manager .pm-discovery{border-bottom:1px solid var(--pm-line);padding-bottom:18px;margin-bottom:20px}
+#manager .pm-discovery-tools{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:10px}
+#manager .pm-discovery-tools label:not([hidden]){display:grid;gap:6px;flex:1;min-width:180px;font-size:12px;color:var(--pm-muted)}
+#manager .pm-discovery-tools .pm-input{width:100%}
+#manager .pm-discovery-range:not([hidden]){display:grid;gap:6px;margin:0 0 10px;font-size:12px;color:var(--pm-muted)}
+#manager .pm-discovery-range .pm-input{width:100%;box-sizing:border-box}
+#manager .pm-discovery-advanced{margin:0 0 12px;font-size:12px;color:var(--pm-muted)}
+#manager .pm-discovery-advanced summary{cursor:pointer;padding:5px 0}
+#manager .pm-discovery-advanced label{display:grid;gap:6px;margin:10px 0;min-width:0}
+#manager .pm-discovery-advanced .pm-input{width:100%;min-width:0;box-sizing:border-box}
+#manager .pm-discovered{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:48px;text-align:left;background:transparent;border:0;border-bottom:1px solid var(--pm-line);padding:10px 0;color:inherit;cursor:pointer;font:inherit;font-size:12px}
+#manager .pm-discovered>span:first-child{min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;overflow-wrap:anywhere}
+#manager .pm-discovered small{display:block;flex-basis:100%;color:var(--pm-muted);font-size:12px}
+#manager .pm-discovered>span:last-child{flex-shrink:0;color:var(--pm-accent)}
+#manager .pm-discovered:hover{background:#f6f7f9}
+#manager .pm-discovered:disabled{opacity:.5;cursor:default}
+#manager h1,#manager h2,#manager h3,#manager p{margin:0}
+#manager .pm-app{min-height:100dvh;border:0;border-radius:0;overflow:visible}
+#manager .pm-content{max-width:1440px;margin:auto}
+#manager dialog{position:fixed}
+#manager .pm-add-dialog[open]{display:flex;flex-direction:column}
+#manager .pm-add-dialog form{display:block;flex:1;max-height:none}
+#manager .pm-toast{position:fixed;bottom:24px}
+#manager .pm-inline-status{padding:12px 22px;background:#f3f7f4;color:#28664f;font-size:12px;flex-shrink:0}
+#manager .pm-inline-status.is-error,#manager .pm-service-error{color:#b42332;background:#fff1f2}
+#manager .pm-service-error{padding:12px 24px;font-size:12px}
+#manager .pm-event{grid-template-columns:115px minmax(0,1fr) auto}
+#manager .pm-event time{line-height:1.7;overflow-wrap:anywhere}
+#manager .pm-login{display:grid;place-items:center;padding:24px}
+#manager .pm-login-card{width:100%;max-width:360px;padding:32px}
+#manager .pm-login-card h1{font-size:22px;margin:20px 0 28px}
+#manager .pm-login-card .pm-btn{width:100%;margin-top:8px}
+#manager .pm-remove-area{border-top:1px solid var(--pm-line);margin-top:24px;padding-top:16px}
+#manager .is-danger{color:var(--pm-accent)}
+#manager details{margin:18px 0}
+#manager summary{cursor:pointer;font-size:12px;margin-bottom:18px}
+#manager .pm-device-name,#manager .pm-detail-name,#manager .pm-tile-name{overflow-wrap:anywhere}
+#manager .pm-tile-value .pm-reading-caption{display:block;font-size:11px;letter-spacing:0}
+#manager .pm-config-section .pm-btn{margin-top:12px}
+#manager .pm-field>label{color:var(--pm-muted);font-size:11px}
+@container pm-manager (max-width:700px){
+  #manager .pm-device-list:has(.pm-empty){display:block}
+  #manager .pm-event{grid-template-columns:90px minmax(0,1fr);gap:8px}
+  #manager .pm-event>span:last-child{grid-column:2}
+}

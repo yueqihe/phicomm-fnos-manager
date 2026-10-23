@@ -1,0 +1,11 @@
+[
+  {
+    "stepTitle": "升级斐讯设备管理",
+    "items": [
+      {
+        "type": "tips",
+        "helpText": "Go 原生程序内置网页、SQLite 和 MQTT，无需安装 Node.js、Go 或 Docker。使用飞牛 NAS 管理员账号打开应用；升级保留设备、连接密码、空间、历史和电费。"
+      }
+    ]
+  }
+]

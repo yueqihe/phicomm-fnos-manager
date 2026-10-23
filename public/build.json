@@ -1,0 +1,23 @@
+{
+  "framework": "React",
+  "sources": {
+    "package.json": "ec67dbead120dd127862c6715c49b45bb97a0fb268eca73451833ae8ae8380d2",
+    "package-lock.json": "8466b12f81b3cb1a693185e1a36c58e19ead1ca33a5601543cbc0be2b497feaf",
+    "scripts/build-web.mjs": "a45f804debf8d11fd428a408a2d5639a0fa52197c6367516020e5ff831d29b92",
+    "frontend/app.jsx": "f749aa0883eff2a014ed94b0a94020ab1a001c523c9b45d6aeae2f11c322cce8",
+    "frontend/devices.jsx": "d3c56548c22e4ebdab7676aaa328abaa1444b345cc1c510982b655aa22f142f1",
+    "frontend/dialogs.jsx": "c6e56a360839584503d2b9912fc888291845df9cb47a187f8e8ef6ea06e79ad8",
+    "frontend/discovery.jsx": "0a92d05d2a3253130b5875315c3d2e72d07e994931a7f1530b99810ec5ffb7c4",
+    "frontend/styles.css": "506f1c8c244e915ce6146fba0712da0d53ef72d0a42b2ea27088b13d26cb1894",
+    "frontend/ui.jsx": "f2a5932b1c93d2747af333ce5761ef8699406704f415d6afc52c48860c380d9d"
+  },
+  "assets": {
+    "public/index.html": "af46a162e28d9102f1845315f7b9722be442e98fa960c693b89bfa1b807e2815",
+    "public/app.js": "27c63cc4bf2e1b2fe764f191af4e71708960cc461806eb0302e7de9faaffb680",
+    "public/styles.css": "506f1c8c244e915ce6146fba0712da0d53ef72d0a42b2ea27088b13d26cb1894",
+    "public/licenses/react.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+    "public/licenses/react-dom.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+    "public/licenses/scheduler.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+    "public/licenses/lucide-react.LICENSE": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+  }
+}

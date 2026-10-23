@@ -1,0 +1,35 @@
+#!/bin/bash
+# Shared lifecycle helpers. Paths are supplied by fnOS, never by wizard input.
+set -euo pipefail
+umask 077
+
+fail() {
+    printf '%s\n' "$1" >&2
+    if [ -n "${TRIM_TEMP_LOGFILE:-}" ]; then
+        printf '%s\n' "$1" > "$TRIM_TEMP_LOGFILE"
+    fi
+    exit 1
+}
+
+require_paths() {
+    [ -n "${TRIM_APPDEST:-}" ] && [ -d "$TRIM_APPDEST/server" ] || fail "找不到应用程序目录。"
+    [ -n "${TRIM_PKGVAR:-}" ] && [[ "$TRIM_PKGVAR" = /* ]] || fail "找不到应用数据目录。"
+    APP_DIR="$(cd "$TRIM_APPDEST/server" && pwd -P)"
+    SERVICE_ENTRY="$APP_DIR/phicomm-manager"
+    LOG_FILE="$TRIM_PKGVAR/app.log"
+    PID_FILE="$TRIM_PKGVAR/app.pid"
+    SOCKET_FILE="$TRIM_APPDEST/app.sock"
+    mkdir -p "$TRIM_PKGVAR"
+}
+
+runtime() {
+    [ -x "$SERVICE_ENTRY" ] || fail "找不到可执行的管理程序，请重新安装对应架构的应用包。"
+}
+
+initialize() {
+    runtime
+    export MANAGER_DATA_DIR="$TRIM_PKGVAR/data"
+    if ! "$SERVICE_ENTRY" --initialize >> "$LOG_FILE" 2>&1; then
+        fail "应用初始化失败，请检查应用数据目录和加密密钥。"
+    fi
+}

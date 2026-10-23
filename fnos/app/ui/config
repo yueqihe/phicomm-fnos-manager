@@ -1,0 +1,17 @@
+{
+  ".url": {
+    "phicomm-manager.main": {
+      "title": "斐讯设备管理",
+      "icon": "images/icon_{0}.png",
+      "type": "iframe",
+      "protocol": "",
+      "gatewayPrefix": "/app/phicomm-manager",
+      "gatewaySocket": "app.sock",
+      "url": "/app/phicomm-manager/",
+      "allUsers": false,
+      "control": {
+        "accessPerm": "readonly"
+      }
+    }
+  }
+}

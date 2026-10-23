@@ -1,0 +1,3 @@
+#!/bin/bash
+# fnOS owns the upgrade stop/start lifecycle; no device or credential data is removed.
+exit 0

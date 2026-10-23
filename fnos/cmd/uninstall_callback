@@ -1,0 +1,3 @@
+#!/bin/bash
+# Application data retention is managed by fnOS. No recursive deletion here.
+exit 0

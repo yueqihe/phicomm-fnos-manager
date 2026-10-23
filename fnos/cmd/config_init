@@ -1,0 +1,3 @@
+#!/bin/bash
+# Connections and MQTT settings are configured in the app.
+exit 0
