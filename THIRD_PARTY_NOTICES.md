@@ -1,6 +1,6 @@
 # 项目来源与第三方组件
 
-本工具由 [yueqihe](https://github.com/yueqihe) 维护，根据 [phicomm-io 斐讯设备社区项目](https://github.com/phicomm-io/)的 TC1 / M1 / A1 设备协议与固件生态制作，提供 fnOS 上的集中管理与控制功能。感谢上游作者和贡献者提供的固件、协议说明和设备资料。
+本工具由 [情深深雨蒙蒙（yueqihe）](https://github.com/yueqihe) 维护，根据 [phicomm-io 斐讯设备社区项目](https://github.com/phicomm-io/)的 TC1 / M1 / A1 设备协议与固件生态制作，提供 fnOS 上的集中管理与控制功能。感谢上游作者和贡献者提供的固件、协议说明和设备资料。
 
 - [斐讯设备社区文档与下载](https://phicomm-io.github.io/)
 - [统一设备前端与协议参考](https://github.com/phicomm-io/phicomm-community-frontend)

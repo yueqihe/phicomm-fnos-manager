@@ -1,6 +1,6 @@
 # 斐讯设备管理 · fnOS
 
-基于 [phicomm-io 斐讯设备社区项目](https://github.com/phicomm-io/)制作的 fnOS 原生控制工具，在飞牛 NAS 上集中管理 TC1 智能排插、M1 空气检测仪和 A1 空气净化器。由 [yueqihe](https://github.com/yueqihe) 独立维护。
+基于 [phicomm-io 斐讯设备社区项目](https://github.com/phicomm-io/)制作的 fnOS 原生控制工具，在飞牛 NAS 上集中管理 TC1 智能排插、M1 空气检测仪和 A1 空气净化器。由 [情深深雨蒙蒙（yueqihe）](https://github.com/yueqihe) 独立维护。
 
 使用 Go 后端和 React 前端，网页、SQLite 数据库和 MQTT 服务均内置于程序。NAS 无需安装 Node.js、Go、独立数据库或 Docker，支持局域网直连与 TMCP v2 MQTT 接入。
 
@@ -20,17 +20,17 @@
 
 需要 fnOS 1.2.0 及以上，以及刷入兼容社区固件的 TC1 / M1 / A1。[查看最新版本](https://github.com/yueqihe/phicomm-fnos-manager/releases/latest)。
 
-| NAS 架构 | 0.2.3 安装包 |
+| NAS 架构 | 0.2.4 安装包 |
 | --- | --- |
-| ARM64 / AArch64 | [phicomm-manager-0.2.3-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.3/phicomm-manager-0.2.3-arm.fpk) |
-| x86-64 / AMD64 | [phicomm-manager-0.2.3-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.3/phicomm-manager-0.2.3-x86.fpk) |
+| ARM64 / AArch64 | [phicomm-manager-0.2.4-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.4/phicomm-manager-0.2.4-arm.fpk) |
+| x86-64 / AMD64 | [phicomm-manager-0.2.4-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.4/phicomm-manager-0.2.4-x86.fpk) |
 
 1. 在飞牛应用中心选择手动安装，上传对应架构的 FPK。
 2. 使用飞牛管理员账号，从桌面打开“斐讯设备管理”，无需再设置应用管理密码。
 3. 点击列表或空间视图下方的“添加设备”，扫描设备或填写设备内网地址。
-4. 在“设置”中调整设备连接、MQTT 服务和电价。
+4. 在“设置”中调整设备连接、MQTT 服务和电价；“外观”可选择浅色、深色或跟随系统，即时生效并记住此设备的偏好。
 
-从 0.1.x / 0.2.0 / 0.2.1 / 0.2.2 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
+从 0.1.x / 0.2.0 / 0.2.1 / 0.2.2 / 0.2.3 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
 
 ## 通过 fnOS 远程控制
 
@@ -49,6 +49,7 @@
 - 一个“扫描设备”入口结合 mDNS / DNS-SD 与局域网探测，自动选择局域网接口并过滤容器网桥等虚拟接口；支持进度、停止，以及高级网卡 / 网段设置。
 - 内置 MQTT Broker，也可连接外部 Broker；支持 TMCP v2 自动发现、设备凭据和主题权限，外部连接可使用 TLS。
 - 设备连接、服务设置、控制和历史通过弹窗操作。
+- 浅色 / 深色 / 跟随系统主题，覆盖设备列表、空间卡片、控制和设置弹窗。
 - TC1 用电换算为“度”，支持统一电价与峰谷电价，显示当前单价和预估消费。
 - SQLite 本地保存数据，连接凭据使用 AES-256-GCM 加密，沿用旧版 `secrets.key`。
 

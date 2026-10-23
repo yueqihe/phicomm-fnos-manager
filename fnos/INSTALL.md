@@ -1,18 +1,20 @@
-# 安装斐讯设备管理 0.2.3（Go + React）
+# 安装斐讯设备管理 0.2.4（Go + React）
 
 适用于 fnOS 1.2.0 及以上。ARM 包面向 ARM64 / AArch64 NAS；x86 包面向 x86-64 NAS。程序已编译并内置网页、SQLite、MQTT 服务，无需安装 Node.js、Go、数据库或 Docker。
 
-1. 在飞牛应用中心选择手动安装，ARM64 NAS 上传 `phicomm-manager-0.2.3-arm.fpk`，x86-64 NAS 上传 `phicomm-manager-0.2.3-x86.fpk`。
+1. 在飞牛应用中心选择手动安装，ARM64 NAS 上传 `phicomm-manager-0.2.4-arm.fpk`，x86-64 NAS 上传 `phicomm-manager-0.2.4-x86.fpk`。
 2. 安装完成后使用飞牛 NAS 管理员账号，从桌面打开“斐讯设备管理”。无需应用管理密码。
 3. 点击列表 / 空间视图下方的“添加设备”，自动扫描设备；需要重试时点击“扫描设备”。也可填写设备内网地址。
 4. “设置 → 设备连接”修改设备名称、空间和连接方式；“设置 → 服务设置”配置内置 MQTT 或外部 Broker。
 5. “设置 → 电价设置”填写统一电价或峰谷电价，TC1 显示用电“度”、当前单价和小字预估消费。
 
-本工具由 [yueqihe](https://github.com/yueqihe) 维护，基于 [phicomm-io 斐讯设备社区项目](https://github.com/phicomm-io/)的设备协议和固件生态制作。[源码仓库](https://github.com/yueqihe/phicomm-fnos-manager)提供完整 Go + React 管理端和构建脚本，设备资料见[社区文档](https://phicomm-io.github.io/)。
+“设置 → 外观”可选择浅色、深色或跟随系统主题，修改后即时生效并记住当前设备的选择。
+
+本工具由 [情深深雨蒙蒙（yueqihe）](https://github.com/yueqihe) 维护，基于 [phicomm-io 斐讯设备社区项目](https://github.com/phicomm-io/)的设备协议和固件生态制作。[源码仓库](https://github.com/yueqihe/phicomm-fnos-manager)提供完整 Go + React 管理端和构建脚本，设备资料见[社区文档](https://phicomm-io.github.io/)。
 
 可借助 fnOS 的远程访问，在外网登录飞牛并从桌面打开本工具，远程查看和控制设备。先确保 NAS 能通过局域网或 MQTT 连接设备，再在 fnOS 中配置远程访问与应用入口。设备无需单独映射网页或 MQTT 端口到公网。
 
-从 0.1.x、0.2.0、0.2.1 或 0.2.2 升级会继续读取原 SQLite 数据库与 `secrets.key`，保留设备、连接密码、空间、活动历史和电费记录。请通过应用中心升级，保留应用数据。原先的 Node.js 22 应用已经不再是本包的依赖。
+从 0.1.x、0.2.0、0.2.1、0.2.2 或 0.2.3 升级会继续读取原 SQLite 数据库与 `secrets.key`，保留设备、连接密码、空间、活动历史和电费记录。请通过应用中心升级，保留应用数据。原先的 Node.js 22 应用已经不再是本包的依赖。
 
 设备状态自动更新，无需点击刷新。局域网设备默认每 15 秒采集，MQTT 随设备上报更新；页面每 5 秒同步，切回前台或网络恢复时立即同步。
 

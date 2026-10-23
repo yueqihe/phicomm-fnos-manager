@@ -28,7 +28,7 @@ const assert = require('node:assert/strict');
   let ready=false;
   for(let i=0;i<80;i++){try{const r=await fetch(url);if(r.ok){ready=true;break}}catch{} await new Promise(r=>setTimeout(r,100));}
   assert.ok(ready,logs);
-  const context=await browser.newContext({viewport:{width:1440,height:1000}});
+  const context=await browser.newContext({viewport:{width:1440,height:1000},colorScheme:'light'});
   const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
   // Discovery transport itself is tested in Go against a single loopback host.
   let discovery={interfaces:[],state:'complete',phase:'done',mdns:'complete',mode:'auto',devices:[],protectedAddresses:[],checked:0,total:0};
@@ -145,8 +145,58 @@ const assert = require('node:assert/strict');
   await settings.getByRole('button',{name:'关闭设置',exact:true}).click();await page.getByRole('button',{name:'设置',exact:true}).click();
   await settings.getByRole('button',{name:'服务设置',exact:true}).click();assert.equal(await settings.getByLabel('Broker 地址 / NAS 内网地址',{exact:true}).inputValue(),'');
   await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
+  // Theme changes must keep configuration drafts and cover native inputs and modal surfaces.
+  await page.getByRole('button',{name:'设置',exact:true}).click();
+  await settings.getByLabel('设备',{exact:true}).selectOption('tc1-aabbcc000201');
+  await settings.getByLabel('设备名称',{exact:true}).fill('外观切换保留草稿');
+  await settings.getByRole('button',{name:'外观',exact:true}).click();
+  assert.equal(await settings.getByLabel('主题',{exact:true}).inputValue(),'system');
+  await settings.getByLabel('主题',{exact:true}).selectOption('dark');
+  await page.waitForFunction(()=>getComputedStyle(document.documentElement).colorScheme==='dark');
+  assert.equal(await settings.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(36, 38, 41)');
+  assert.equal(await settings.getByLabel('主题',{exact:true}).evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(36, 38, 41)');
+  assert.equal(await settings.getByRole('button',{name:'保存配置',exact:true}).count(),0);
+  await settings.getByRole('button',{name:'设备连接',exact:true}).click();
+  assert.equal(await settings.getByLabel('设备名称',{exact:true}).inputValue(),'外观切换保留草稿');
+  await settings.getByRole('button',{name:'外观',exact:true}).click();
+  await page.screenshot({path:path.join(output,'theme-dark-settings.png'),fullPage:true});
+  await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
+  await page.getByRole('button',{name:'列表',exact:true}).click();
+  await page.locator('[data-device="tc1-aabbcc000201"]').click();
+  await page.screenshot({path:path.join(output,'theme-dark-desktop.png'),fullPage:true});
+  for(const width of [320,390,700,768,900,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:path.join(output,'theme-dark-mobile.png'),fullPage:true});
+  await page.getByRole('button',{name:'空间',exact:true}).click();await page.locator('[data-open-control="tc1-aabbcc000201"]').click();
+  assert.equal(await control.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(36, 38, 41)');
+  await page.screenshot({path:path.join(output,'theme-dark-control.png'),fullPage:true});
+  await control.getByRole('button',{name:'关闭设备控制',exact:true}).click();
+  await page.getByRole('button',{name:'历史记录',exact:true}).click();
+  assert.equal(await history.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(36, 38, 41)');
+  await history.getByRole('button',{name:'关闭历史记录',exact:true}).click();
+  await page.getByRole('button',{name:'添加设备',exact:true}).click();
+  assert.equal(await add.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(36, 38, 41)');
+  await add.getByRole('button',{name:'关闭添加设备',exact:true}).click();
+  // Explicit choices survive reloads and override the system; automatic mode reacts live.
+  await page.reload();await page.getByRole('button',{name:'设置',exact:true}).waitFor();
+  assert.equal(await page.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'dark');
+  await page.getByRole('button',{name:'设置',exact:true}).click();await settings.getByRole('button',{name:'外观',exact:true}).click();
+  assert.equal(await settings.getByLabel('主题',{exact:true}).inputValue(),'dark');
+  await page.emulateMedia({colorScheme:'dark'});
+  await settings.getByLabel('主题',{exact:true}).selectOption('light');
+  await page.waitForFunction(()=>getComputedStyle(document.documentElement).colorScheme==='light');
+  await settings.getByLabel('主题',{exact:true}).selectOption('system');
+  await page.waitForFunction(()=>getComputedStyle(document.documentElement).colorScheme==='dark');
+  await page.emulateMedia({colorScheme:'light'});
+  await page.waitForFunction(()=>getComputedStyle(document.documentElement).colorScheme==='light');
+  await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
+  // A fresh browser with no stored preference must start in its system's theme.
+  const fresh=await browser.newContext({viewport:{width:390,height:844},colorScheme:'dark'});
+  const first=await fresh.newPage();await first.goto(url);await first.getByRole('button',{name:'设置',exact:true}).waitFor();
+  assert.equal(await first.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'dark');
+  await fresh.close();
   assert.deepEqual(errors,[]);
-  console.log('Go + React browser passed: automatic device/billing updates, foreground/network recovery, three models, keyboard controls, settings drafts, history, one combined scan, hidden advanced fields, subnet selection, protected addresses, Escape and 320–1440px.');
+  console.log('Go + React browser passed: light/dark/system themes, persisted preferences, modal colors and drafts, automatic device/billing updates, foreground/network recovery, three models, keyboard controls, history, combined scan, Escape and 320–1440px.');
  } finally {
   await browser.close();for(const f of fixtures)await f.close();
   if(child.exitCode===null){child.kill();await new Promise(resolve=>child.once('exit',resolve));}

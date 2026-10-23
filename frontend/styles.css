@@ -1,5 +1,7 @@
-
-#manager{--pm-bg:#f5f6f8;--pm-paper:#ffffff;--pm-ink:#20242b;--pm-muted:#737b88;--pm-line:#e5e7ec;--pm-accent:#d92d3d;--pm-tint:#fff4f4;--pm-green:#388066;--pm-radius:6px;font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:var(--pm-ink);font-size:14px;line-height:1.5;color-scheme:light;container:pm-manager / inline-size}
+:root{--pm-bg:#f5f6f8;--pm-paper:#ffffff;--pm-ink:#20242b;--pm-muted:#737b88;--pm-line:#e5e7ec;--pm-accent:#d92d3d;--pm-tint:#fff4f4;--pm-green:#388066;--pm-radius:6px;--pm-hover:#fafbfc;--pm-icon-bg:#f3f4f6;--pm-icon-ink:#616a77;--pm-icon-active:#fce6e8;--pm-toggle-off:#dfe2e8;--pm-dot-off:#a7adb7;--pm-separator:#c6cad1;--pm-selected-line:#efbac0;--pm-toast-bg:#20242b;--pm-toast-ink:#ffffff;--pm-success-bg:#f3f7f4;--pm-success-ink:#28664f;--pm-error-bg:#fff1f2;--pm-error-ink:#b42332;--pm-primary:#d92d3d;--pm-backdrop:#20242b45;--pm-mark-bg:#20242b;--pm-mark-ink:#ffffff;color-scheme:light}
+:root[data-theme="dark"]{--pm-bg:#1c1e20;--pm-paper:#242629;--pm-ink:#edf0f3;--pm-muted:#a3a9b4;--pm-line:#393c41;--pm-accent:#ff6573;--pm-tint:#34282c;--pm-green:#70c5a6;--pm-hover:#2c2f33;--pm-icon-bg:#303339;--pm-icon-ink:#b5bcc7;--pm-icon-active:#452c33;--pm-toggle-off:#555b65;--pm-dot-off:#737b88;--pm-separator:#555b65;--pm-selected-line:#a34d58;--pm-toast-bg:#edf0f3;--pm-toast-ink:#20242b;--pm-success-bg:#24382e;--pm-success-ink:#9cdbb9;--pm-error-bg:#3c272d;--pm-error-ink:#ffabb4;--pm-primary:#d92d3d;--pm-backdrop:#00000080;--pm-mark-bg:#303339;--pm-mark-ink:#edf0f3;color-scheme:dark;}
+@media(prefers-color-scheme:dark){:root:not([data-theme]){--pm-bg:#1c1e20;--pm-paper:#242629;--pm-ink:#edf0f3;--pm-muted:#a3a9b4;--pm-line:#393c41;--pm-accent:#ff6573;--pm-tint:#34282c;--pm-green:#70c5a6;--pm-hover:#2c2f33;--pm-icon-bg:#303339;--pm-icon-ink:#b5bcc7;--pm-icon-active:#452c33;--pm-toggle-off:#555b65;--pm-dot-off:#737b88;--pm-separator:#555b65;--pm-selected-line:#a34d58;--pm-toast-bg:#edf0f3;--pm-toast-ink:#20242b;--pm-success-bg:#24382e;--pm-success-ink:#9cdbb9;--pm-error-bg:#3c272d;--pm-error-ink:#ffabb4;--pm-primary:#d92d3d;--pm-backdrop:#00000080;--pm-mark-bg:#303339;--pm-mark-ink:#edf0f3;color-scheme:dark;}}
+#manager{font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:var(--pm-ink);font-size:14px;line-height:1.5;container:pm-manager / inline-size}
 #manager *{box-sizing:border-box}
 #manager [hidden]{display:none!important}
 #manager button,#manager input,#manager select{font:inherit}
@@ -9,7 +11,7 @@
 #manager .pm-app{position:relative;min-height:820px;background:var(--pm-bg);overflow:clip;border:1px solid var(--pm-line);border-radius:9px}
 #manager .pm-top{display:flex;align-items:center;gap:28px;min-height:86px;padding:16px 28px;border-bottom:1px solid var(--pm-line);background:var(--pm-paper)}
 #manager .pm-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
-#manager .pm-brandmark{width:29px;height:29px;display:grid;place-items:center;background:var(--pm-ink);color:var(--pm-paper);border-radius:7px}
+#manager .pm-brandmark{width:29px;height:29px;display:grid;place-items:center;background:var(--pm-mark-bg);color:var(--pm-mark-ink);border-radius:7px}
 #manager svg{width:17px;height:17px;flex-shrink:0;stroke-width:1.6}
 #manager .pm-nav{position:relative;padding:0 1px;border:0;background:transparent;color:var(--pm-muted);white-space:nowrap}
 #manager .pm-header-summary{flex:1;min-width:0}
@@ -24,8 +26,8 @@
 #manager h1,#manager h2,#manager h3,#manager p{margin:0}
 #manager .pm-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;border:1px solid var(--pm-line);border-radius:4px;background:var(--pm-paper);color:var(--pm-ink);padding:7px 12px;white-space:nowrap;transition:background .15s}
 #manager .pm-btn:hover{background:var(--pm-bg)}
-#manager .pm-btn-primary{background:var(--pm-accent);border-color:var(--pm-accent);color:#fff}
-#manager .pm-btn-primary:hover{background:var(--pm-accent);filter:brightness(.94)}
+#manager .pm-btn-primary{background:var(--pm-primary);border-color:var(--pm-primary);color:#fff}
+#manager .pm-btn-primary:hover{background:var(--pm-primary);filter:brightness(.94)}
 #manager .pm-stats{display:flex;align-items:center}
 #manager .pm-stat{min-width:83px;padding:0 18px;border-right:1px solid var(--pm-line)}
 #manager .pm-stat:first-child{padding-left:0}
@@ -46,7 +48,7 @@
 #manager .pm-list-panel .pm-add-inline{border-top:1px solid var(--pm-line);border-radius:0 0 var(--pm-radius) var(--pm-radius)}
 #manager .pm-room-add{margin-top:16px;border:1px dashed var(--pm-line);border-radius:var(--pm-radius)}
 #manager .pm-dot{display:inline-block;width:6px;height:6px;flex-shrink:0;border-radius:50%;background:var(--pm-green)}
-#manager .pm-dot-off{background:#a7adb7}
+#manager .pm-dot-off{background:var(--pm-dot-off)}
 #manager .pm-workspace{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(290px,1fr);gap:20px;align-items:stretch}
 #manager .pm-panel{background:var(--pm-paper);border:1px solid var(--pm-line);border-radius:var(--pm-radius);min-width:0}
 #manager .pm-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:16px 20px;border-bottom:1px solid var(--pm-line)}
@@ -58,15 +60,15 @@
 #manager .pm-filter[aria-pressed="true"]{color:var(--pm-accent);background:var(--pm-tint)}
 #manager .pm-row{display:grid;grid-template-columns:39px minmax(0,1fr) auto;gap:13px;align-items:center;position:relative;width:100%;min-height:94px;text-align:left;border:0;border-bottom:1px solid var(--pm-line);padding:17px 20px;background:var(--pm-paper);color:var(--pm-ink)}
 #manager .pm-row:last-child{border-bottom:0}
-#manager .pm-row:hover{background:#fafbfc}
+#manager .pm-row:hover{background:var(--pm-hover)}
 #manager .pm-row[aria-pressed="true"]{background:var(--pm-tint)}
 #manager .pm-row[aria-pressed="true"]:before{content:"";position:absolute;left:0;top:22px;bottom:22px;width:2px;background:var(--pm-accent)}
-#manager .pm-device-icon{width:39px;height:39px;display:grid;place-items:center;color:#616a77;background:#f3f4f6;border-radius:8px}
-#manager .pm-row[aria-pressed="true"] .pm-device-icon{background:#fce6e8;color:var(--pm-accent)}
+#manager .pm-device-icon{width:39px;height:39px;display:grid;place-items:center;color:var(--pm-icon-ink);background:var(--pm-icon-bg);border-radius:8px}
+#manager .pm-row[aria-pressed="true"] .pm-device-icon{background:var(--pm-icon-active);color:var(--pm-accent)}
 #manager .pm-device-icon svg{width:21px;height:21px}
 #manager .pm-device-name{font-weight:550;font-size:13px;display:block;overflow-wrap:anywhere}
 #manager .pm-device-meta{display:flex;align-items:center;gap:6px;color:var(--pm-muted);font-size:10px;margin-top:7px;flex-wrap:wrap}
-#manager .pm-separator{color:#c6cad1;padding:0 2px}
+#manager .pm-separator{color:var(--pm-separator);padding:0 2px}
 #manager .pm-device-reading{text-align:right;white-space:nowrap;font-size:17px;font-weight:400;font-variant-numeric:tabular-nums}
 #manager .pm-device-reading small{font-size:10px;color:var(--pm-muted);margin-left:3px}
 #manager .pm-reading-caption{display:block;font-size:10px;color:var(--pm-muted);margin-top:5px;font-weight:400}
@@ -75,7 +77,7 @@
 #manager .pm-detail-name{font-size:18px;font-weight:550;letter-spacing:-.5px;overflow-wrap:anywhere}
 #manager .pm-status{display:flex;align-items:center;gap:6px;color:var(--pm-muted);font-size:11px}
 #manager .pm-statusline{display:flex;align-items:center;gap:6px;margin-top:7px;color:var(--pm-muted);font-size:11px;flex-wrap:wrap}
-#manager .pm-toggle{position:relative;width:37px;min-height:23px;border:0;border-radius:20px;background:#dfe2e8;padding:3px;flex-shrink:0}
+#manager .pm-toggle{position:relative;width:37px;min-height:23px;border:0;border-radius:20px;background:var(--pm-toggle-off);padding:3px;flex-shrink:0}
 #manager .pm-toggle:after{content:"";display:block;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #00000015;transform:translateX(0);transition:transform .15s}
 #manager .pm-toggle[aria-checked="true"]{background:var(--pm-accent)}
 #manager .pm-toggle[aria-checked="true"]:after{transform:translateX(14px)}
@@ -107,7 +109,7 @@
 #manager .pm-range-ends{display:flex;justify-content:space-between;color:var(--pm-muted);font-size:10px;margin-top:0}
 #manager .pm-modes{display:flex;gap:7px;margin:11px 0 20px}
 #manager .pm-mode{flex:1;padding:8px;border:1px solid var(--pm-line);border-radius:3px;background:var(--pm-paper);color:var(--pm-muted);font-size:11px}
-#manager .pm-mode[aria-pressed="true"]{color:var(--pm-accent);border-color:#efbac0;background:var(--pm-tint)}
+#manager .pm-mode[aria-pressed="true"]{color:var(--pm-accent);border-color:var(--pm-selected-line);background:var(--pm-tint)}
 #manager .pm-info-row{padding:12px 0;border-bottom:1px solid var(--pm-line);display:flex;align-items:center;justify-content:space-between;font-size:11px}
 #manager .pm-info-row span{color:var(--pm-muted)}
 #manager .pm-info-row strong{font-weight:500}
@@ -144,7 +146,7 @@
 #manager .pm-mobile-picker{display:none}
 #manager .pm-tile{min-height:205px;display:flex;flex-direction:column}
 #manager .pm-tile-open{display:flex;flex-direction:column;gap:14px;flex:1;width:100%;padding:20px 20px 14px;border:0;border-radius:var(--pm-radius) var(--pm-radius) 0 0;background:transparent;color:inherit;text-align:left}
-#manager .pm-tile-open:hover{background:#fafbfc}
+#manager .pm-tile-open:hover{background:var(--pm-hover)}
 #manager .pm-tile-open:hover .pm-device-icon{background:var(--pm-tint);color:var(--pm-accent)}
 #manager .pm-tile-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
 #manager .pm-tile-info{display:block}
@@ -152,11 +154,11 @@
 #manager .pm-tile-value{font-size:29px;letter-spacing:-.7px;font-weight:350}
 #manager .pm-tile-value small{font-size:11px;color:var(--pm-muted);letter-spacing:0;margin-left:4px}
 #manager .pm-tile-bottom{display:flex;align-items:center;justify-content:space-between;min-height:34px;border-top:1px solid var(--pm-line);padding-top:10px;margin:0 20px 16px}
-#manager .pm-toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);padding:10px 16px;background:var(--pm-ink);color:#fff;border-radius:5px;font-size:12px;z-index:8;box-shadow:0 5px 18px #00000012;max-width:calc(100% - 30px);width:max-content;text-align:center}
+#manager .pm-toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);padding:10px 16px;background:var(--pm-toast-bg);color:var(--pm-toast-ink);border-radius:5px;font-size:12px;z-index:8;box-shadow:0 5px 18px #00000012;max-width:calc(100% - 30px);width:max-content;text-align:center}
 #manager dialog{width:min(420px,calc(100% - 24px));max-height:calc(100dvh - 24px);overflow:hidden;padding:0;border:1px solid var(--pm-line);border-radius:9px;background:var(--pm-paper);color:var(--pm-ink);box-shadow:0 20px 80px #13192424;position:absolute;inset:0;margin:auto}
 #manager dialog form{display:flex;flex-direction:column;max-height:calc(100dvh - 26px)}
 #manager .pm-dialog-head,#manager .pm-dialog-footer{flex-shrink:0}
-#manager dialog::backdrop{background:#20242b45}
+#manager dialog::backdrop{background:var(--pm-backdrop)}
 #manager .pm-dialog-head{padding:20px 22px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--pm-line)}
 #manager .pm-dialog-head h2{font-size:17px;font-weight:550}
 #manager .pm-dialog-body{padding:22px;overflow-y:auto;min-height:0;overscroll-behavior:contain}
@@ -250,7 +252,7 @@
   #manager .pm-settings-tab,#manager .pm-check{min-height:44px}
   #manager .pm-view-option,#manager .pm-add-inline{min-height:44px}
   #manager .pm-toggle{width:44px;min-height:44px;padding:0;background:transparent}
-  #manager .pm-toggle:before{content:"";position:absolute;left:2px;top:50%;width:40px;height:24px;border-radius:20px;background:#dfe2e8;transform:translateY(-50%)}
+  #manager .pm-toggle:before{content:"";position:absolute;left:2px;top:50%;width:40px;height:24px;border-radius:20px;background:var(--pm-toggle-off);transform:translateY(-50%)}
   #manager .pm-toggle:after{position:absolute;left:5px;top:50%;width:18px;height:18px;transform:translateY(-50%)}
   #manager .pm-toggle[aria-checked="true"]{background:transparent}
   #manager .pm-toggle[aria-checked="true"]:before{background:var(--pm-accent)}
@@ -258,7 +260,7 @@
 }
 @media(prefers-reduced-motion:reduce){#manager *{transition:none!important}}
 
-html,body{margin:0;min-height:100%;background:#f5f6f8}
+html,body{margin:0;min-height:100%;background:var(--pm-bg)}
 #manager .pm-discovery{border-bottom:1px solid var(--pm-line);padding-bottom:18px;margin-bottom:20px}
 #manager .pm-discovery-tools{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:10px}
 #manager .pm-discovery-tools label:not([hidden]){display:grid;gap:6px;flex:1;min-width:180px;font-size:12px;color:var(--pm-muted)}
@@ -273,7 +275,7 @@ html,body{margin:0;min-height:100%;background:#f5f6f8}
 #manager .pm-discovered>span:first-child{min-width:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;overflow-wrap:anywhere}
 #manager .pm-discovered small{display:block;flex-basis:100%;color:var(--pm-muted);font-size:12px}
 #manager .pm-discovered>span:last-child{flex-shrink:0;color:var(--pm-accent)}
-#manager .pm-discovered:hover{background:#f6f7f9}
+#manager .pm-discovered:hover{background:var(--pm-hover)}
 #manager .pm-discovered:disabled{opacity:.5;cursor:default}
 #manager h1,#manager h2,#manager h3,#manager p{margin:0}
 #manager .pm-app{min-height:100dvh;border:0;border-radius:0;overflow:visible}
@@ -282,8 +284,8 @@ html,body{margin:0;min-height:100%;background:#f5f6f8}
 #manager .pm-add-dialog[open]{display:flex;flex-direction:column}
 #manager .pm-add-dialog form{display:block;flex:1;max-height:none}
 #manager .pm-toast{position:fixed;bottom:24px}
-#manager .pm-inline-status{padding:12px 22px;background:#f3f7f4;color:#28664f;font-size:12px;flex-shrink:0}
-#manager .pm-inline-status.is-error,#manager .pm-service-error{color:#b42332;background:#fff1f2}
+#manager .pm-inline-status{padding:12px 22px;background:var(--pm-success-bg);color:var(--pm-success-ink);font-size:12px;flex-shrink:0}
+#manager .pm-inline-status.is-error,#manager .pm-service-error{color:var(--pm-error-ink);background:var(--pm-error-bg)}
 #manager .pm-service-error{padding:12px 24px;font-size:12px}
 #manager .pm-event{grid-template-columns:115px minmax(0,1fr) auto}
 #manager .pm-event time{line-height:1.7;overflow-wrap:anywhere}

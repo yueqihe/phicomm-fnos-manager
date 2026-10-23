@@ -22,7 +22,7 @@ import (
 	"time"
 )
 
-const version = "0.2.3"
+const version = "0.2.4"
 
 //go:embed public/index.html public/app.js public/styles.css
 var frontend embed.FS
