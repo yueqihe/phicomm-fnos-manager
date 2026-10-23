@@ -1,5 +1,5 @@
 appname=phicomm-manager
-version=0.2.2
+version=0.2.3
 display_name=斐讯设备管理
 desc=原生管理 TC1 智能排插、M1 空气检测仪和 A1 空气净化器，支持局域网与 MQTT 接入、空间管理和手机访问。
 source=thirdparty
@@ -12,4 +12,4 @@ desktop_applaunchname=phicomm-manager.main
 ctl_stop=true
 checkport=false
 disable_authorization_path=true
-changelog=移除多余的手动刷新按钮，状态自动更新；切回前台或网络恢复时立即同步；保留原设备、连接、电费与历史数据。
+changelog=移除页面顶部重复的图标与应用标题；设备统计靠左，连接状态、设置与历史入口自适应排布；保留自动更新和原应用数据。
