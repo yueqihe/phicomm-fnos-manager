@@ -4,21 +4,33 @@
 
 使用 Go 后端和 React 前端，网页、SQLite 数据库和 MQTT 服务均内置于程序。NAS 无需安装 Node.js、Go、独立数据库或 Docker，支持局域网直连与 TMCP v2 MQTT 接入。
 
+## 界面预览
+
+桌面端：
+
+![fnOS 桌面端设备列表与 TC1 控制](docs/screenshots/desktop.png)
+
+手机端：
+
+<img src="docs/screenshots/mobile.jpg" alt="通过 fnOS 远程访问的手机端 TC1 控制界面" width="360" />
+
+以上为实机截图；当前版本已去掉图中的手动刷新按钮，设备状态自动更新。
+
 ## 下载安装
 
 需要 fnOS 1.2.0 及以上，以及刷入兼容社区固件的 TC1 / M1 / A1。[查看最新版本](https://github.com/yueqihe/phicomm-fnos-manager/releases/latest)。
 
-| NAS 架构 | 0.2.1 安装包 |
+| NAS 架构 | 0.2.2 安装包 |
 | --- | --- |
-| ARM64 / AArch64 | [phicomm-manager-0.2.1-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.1/phicomm-manager-0.2.1-arm.fpk) |
-| x86-64 / AMD64 | [phicomm-manager-0.2.1-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.1/phicomm-manager-0.2.1-x86.fpk) |
+| ARM64 / AArch64 | [phicomm-manager-0.2.2-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.2/phicomm-manager-0.2.2-arm.fpk) |
+| x86-64 / AMD64 | [phicomm-manager-0.2.2-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.2/phicomm-manager-0.2.2-x86.fpk) |
 
 1. 在飞牛应用中心选择手动安装，上传对应架构的 FPK。
 2. 使用飞牛管理员账号，从桌面打开“斐讯设备管理”，无需再设置应用管理密码。
 3. 点击列表或空间视图下方的“添加设备”，扫描设备或填写设备内网地址。
 4. 在“设置”中调整设备连接、MQTT 服务和电价。
 
-从 0.1.x / 0.2.0 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
+从 0.1.x / 0.2.0 / 0.2.1 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
 
 ## 通过 fnOS 远程控制
 
@@ -39,6 +51,8 @@
 - 设备连接、服务设置、控制和历史通过弹窗操作。
 - TC1 用电换算为“度”，支持统一电价与峰谷电价，显示当前单价和预估消费。
 - SQLite 本地保存数据，连接凭据使用 AES-256-GCM 加密，沿用旧版 `secrets.key`。
+
+状态自动更新：局域网设备默认每 15 秒采集一次，MQTT 状态随设备上报更新；页面每 5 秒同步最新数据，切回前台或网络恢复时立即同步，无需手动刷新。
 
 电费从首次有效读数开始累计，不追溯未知历史。峰谷按北京时间每日一段谷时计算，支持跨午夜；两次读数间的电量按时间比例分摊，消费金额供参考。
 

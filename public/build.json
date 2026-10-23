@@ -1,19 +1,19 @@
 {
   "framework": "React",
   "sources": {
-    "package.json": "ec67dbead120dd127862c6715c49b45bb97a0fb268eca73451833ae8ae8380d2",
-    "package-lock.json": "8466b12f81b3cb1a693185e1a36c58e19ead1ca33a5601543cbc0be2b497feaf",
+    "package.json": "812ca11db2ae63f242ba6c361e8868a3f8d304288709670df935da841120975f",
+    "package-lock.json": "c7c50a9a40b9135947ba222173681d121851ec6c700f2496f52905b1f0a2977c",
     "scripts/build-web.mjs": "a45f804debf8d11fd428a408a2d5639a0fa52197c6367516020e5ff831d29b92",
-    "frontend/app.jsx": "f749aa0883eff2a014ed94b0a94020ab1a001c523c9b45d6aeae2f11c322cce8",
-    "frontend/devices.jsx": "d3c56548c22e4ebdab7676aaa328abaa1444b345cc1c510982b655aa22f142f1",
+    "frontend/app.jsx": "e2eca064d422c9e019d3c5f8365925a131e9c40f5ebd9a39ebe3912b48080f80",
+    "frontend/devices.jsx": "81efca8d9853c179988d044baa4ef29649124bdec6681e3a9a195a6bafde0a92",
     "frontend/dialogs.jsx": "c6e56a360839584503d2b9912fc888291845df9cb47a187f8e8ef6ea06e79ad8",
     "frontend/discovery.jsx": "0a92d05d2a3253130b5875315c3d2e72d07e994931a7f1530b99810ec5ffb7c4",
     "frontend/styles.css": "506f1c8c244e915ce6146fba0712da0d53ef72d0a42b2ea27088b13d26cb1894",
-    "frontend/ui.jsx": "f2a5932b1c93d2747af333ce5761ef8699406704f415d6afc52c48860c380d9d"
+    "frontend/ui.jsx": "d21ded8378e68c7fd8e70b7a8ead14c6bef2dc8218b5edbca442230b1efe272e"
   },
   "assets": {
     "public/index.html": "af46a162e28d9102f1845315f7b9722be442e98fa960c693b89bfa1b807e2815",
-    "public/app.js": "27c63cc4bf2e1b2fe764f191af4e71708960cc461806eb0302e7de9faaffb680",
+    "public/app.js": "79946010cac3b602962326e2cdc33a180e07740189852a9490f62c74c2e1035e",
     "public/styles.css": "506f1c8c244e915ce6146fba0712da0d53ef72d0a42b2ea27088b13d26cb1894",
     "public/licenses/react.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
     "public/licenses/react-dom.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",

@@ -1,7 +1,7 @@
 import React, {useId, useLayoutEffect, useRef} from 'react';
-import {Layers2, Settings2, History, X, Plus, List, LayoutGrid, PlugZap, AirVent, Wind, Unplug, RefreshCw, ArrowUpRight} from 'lucide-react';
+import {Layers2, Settings2, History, X, Plus, List, LayoutGrid, PlugZap, AirVent, Wind, Unplug, ArrowUpRight} from 'lucide-react';
 
-const icons = {layers: Layers2, settings: Settings2, history: History, x: X, plus: Plus, list: List, grid: LayoutGrid, plug: PlugZap, air: AirVent, wind: Wind, unplug: Unplug, refresh: RefreshCw, arrow: ArrowUpRight};
+const icons = {layers: Layers2, settings: Settings2, history: History, x: X, plus: Plus, list: List, grid: LayoutGrid, plug: PlugZap, air: AirVent, wind: Wind, unplug: Unplug, arrow: ArrowUpRight};
 export function Icon({name}) { const Component = icons[name]; return <Component size={17} strokeWidth={1.6} aria-hidden="true"/>; }
 export function DeviceIcon({device}) { return <Icon name={device.model === 'TC1' ? 'plug' : device.model === 'M1' ? 'air' : 'wind'}/>; }
 export function Dot({online}) { return <span className={`pm-dot${online ? '' : ' pm-dot-off'}`}/>; }

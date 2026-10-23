@@ -30,8 +30,11 @@ function App() {
   },[sync]);
   useEffect(() => {
     if(session !== 'ready') return;
-    const interval=setInterval(async () => {if(fetching.current || document.hidden) return;fetching.current=true;try {await sync();} catch {} finally {fetching.current=false;}},5000);
-    return () => clearInterval(interval);
+    const synchronize=async () => {if(fetching.current || document.hidden) return;fetching.current=true;try {await sync();} catch {} finally {fetching.current=false;}};
+    const interval=setInterval(synchronize,5000);
+    document.addEventListener('visibilitychange',synchronize);
+    window.addEventListener('online',synchronize);
+    return () => {clearInterval(interval);document.removeEventListener('visibilitychange',synchronize);window.removeEventListener('online',synchronize);};
   },[session,sync]);
   const close=() => {setModal(null);setMessage(null);};
   const open=(type,options={}) => {setMessage(null);setModal({type,...options});};
@@ -45,13 +48,7 @@ function App() {
     catch(e) {notify(e.message,true);}
     finally {changeBusy(d.id,false);await sync().catch(() => {});}
   };
-  const refresh=async d => {
-    if(busyRef.current.has(d.id)) return;changeBusy(d.id,true);
-    try {const data=await api(`devices/${d.id}/refresh`,json('POST',{}));replace(data.device);notify(data.device.online ? '状态已更新' : data.device.error,!data.device.online);}
-    catch(e) {notify(e.message,true);}
-    finally {changeBusy(d.id,false);}
-  };
-  const controls={control,refresh,busy,settings:openSettings,can:(d,action) => d.online && connected && !busy.has(d.id) && d.actions.includes(action)};
+  const controls={control,busy,settings:openSettings,can:(d,action) => d.online && connected && !busy.has(d.id) && d.actions.includes(action)};
   if(session !== 'ready') return <div className="pm-app pm-login"><div className="pm-panel pm-login-card"><span className="pm-brandmark"><Icon name="layers"/></span><h1>斐讯设备管理</h1>{session === 'loading' ? <p className="pm-help" role="status">正在连接管理服务…</p> : <><p className="pm-help" role="alert">{session === 'denied' ? '请使用飞牛 NAS 管理员账号登录，并从桌面重新打开应用。' : serviceError}</p><button className="pm-btn pm-btn-primary" onClick={() => location.reload()}>重新检查连接</button></>}</div></div>;
   const values=[devices.length,devices.filter(d => d.online).length,devices.filter(d => !d.online).length], active=devices.find(d => d.id === modal?.id);
   return <div className="pm-app" data-layout={layout}><header className="pm-top"><h1 className="pm-brand"><span className="pm-brandmark"><Icon name="layers"/></span>斐讯设备管理</h1><div className="pm-header-summary" role="group" aria-label="设备概况"><div className="pm-stats">{['全部设备','当前在线','暂时离线'].map((name,i) => <div className="pm-stat" key={name}><span className="pm-stat-label">{name}</span><span className="pm-stat-value">{loading ? '—' : String(values[i]).padStart(2,'0')}<small>台</small></span></div>)}</div></div><div className="pm-header-services" role="group" aria-label="连接状态"><button className="pm-connection-status" onClick={() => openSettings()}><Dot online={devices.some(d => d.lan)}/>局域网 <span className="pm-connection-count">{devices.filter(d => d.lan).length} 台</span></button><button className="pm-connection-status" title={settings.mqttStatus.message || '未启用'} onClick={() => openSettings(selected,'service')}><Dot online={settings.mqttStatus.state === 'connected'}/>MQTT <span className="pm-connection-count">{devices.filter(d => d.mqtt).length} 台</span></button></div><nav className="pm-top-actions" aria-label="设置与记录"><button className="pm-nav pm-utility" aria-label="设置" title="设置" aria-haspopup="dialog" onClick={() => openSettings()}><Icon name="settings"/></button><button className="pm-nav pm-utility" aria-label="历史记录" title="历史记录" aria-haspopup="dialog" onClick={() => open('history')}><Icon name="history"/></button></nav></header><div className="pm-service-error" role="status" hidden={!serviceError}>{serviceError}</div><main className="pm-content"><DeviceWorkspace {...{devices,selected,layout,filter,setFilter,setLayout,loading}} select={setSelected} add={() => open('add')} openControl={id => {setSelected(id);open('control',{id});}} {...controls}/></main><Message message={modal ? null : message}/>

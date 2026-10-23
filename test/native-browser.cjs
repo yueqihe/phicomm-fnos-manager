@@ -58,9 +58,23 @@ const assert = require('node:assert/strict');
   await settings.getByLabel('计费方式',{exact:true}).selectOption('flat');await settings.getByLabel('当前电价（元/度）',{exact:true}).fill('0.6');
   await settings.getByRole('button',{name:'保存配置',exact:true}).click();await settings.getByText('配置已保存',{exact:true}).waitFor();
   await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
-  await page.getByRole('button',{name:'刷新',exact:true}).click();await page.getByText('预估消费 ¥0.00',{exact:false}).waitFor();
-  fixtures[0].power.energy_kwh=3.23;
-  await page.getByRole('button',{name:'刷新',exact:true}).click();await page.getByText('预估消费 ¥1.20',{exact:false}).waitFor();
+  assert.equal(await page.getByRole('button',{name:'刷新',exact:true}).count(),0);
+  await page.getByText('预估消费 ¥0.00',{exact:false}).waitFor({timeout:25000});
+  fixtures[0].power.energy_kwh=3.23;fixtures[0].power.power_watts=43.2;fixtures[0].state.socket_states[1]=1;
+  // Device changes reach the page through background collection and synchronization alone.
+  await page.getByText('预估消费 ¥1.20',{exact:false}).waitFor({timeout:25000});
+  assert.equal(await page.locator('.pm-measurements .pm-metric-value').first().textContent(),'43.2W');
+  assert.equal(await page.getByRole('switch',{name:'客厅排插插口 2',exact:true}).getAttribute('aria-checked'),'true');
+  // Simulate a suspended mobile page while the real backend keeps collecting.
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
+  fixtures[0].power.power_watts=51.7;
+  await until(async()=>{const data=await (await fetch(`${url}api/devices`)).json();return data.devices.find(d=>d.id==='tc1-aabbcc000201').state.power===51.7;},25000);
+  assert.equal(await page.locator('.pm-measurements .pm-metric-value').first().textContent(),'43.2W');
+  const resumed=page.waitForResponse(r=>r.url()===`${url}api/devices`&&r.request().method()==='GET',{timeout:2000});
+  await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});await resumed;
+  await page.waitForFunction(()=>document.querySelector('.pm-measurements .pm-metric-value').textContent==='51.7W');
+  const reconnected=page.waitForResponse(r=>r.url()===`${url}api/devices`&&r.request().method()==='GET',{timeout:2000});
+  await page.evaluate(()=>window.dispatchEvent(new Event('online')));await reconnected;
   await page.screenshot({path:path.join(output,'go-billing-desktop.png'),fullPage:true});
   await page.getByRole('button',{name:'设置',exact:true}).click();await settings.getByRole('button',{name:'电价设置',exact:true}).click();
   await settings.getByLabel('计费方式',{exact:true}).selectOption('tou');await settings.getByLabel('峰时电价（元/度）',{exact:true}).fill('1.2');await settings.getByLabel('谷时电价（元/度）',{exact:true}).fill('0.3');
@@ -132,7 +146,7 @@ const assert = require('node:assert/strict');
   await settings.getByRole('button',{name:'服务设置',exact:true}).click();assert.equal(await settings.getByLabel('Broker 地址 / NAS 内网地址',{exact:true}).inputValue(),'');
   await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
   assert.deepEqual(errors,[]);
-  console.log('Go + React browser passed: three models, keyboard controls, billing, settings drafts, history, one combined scan, hidden advanced fields, subnet selection, protected addresses, Escape and 320–1440px.');
+  console.log('Go + React browser passed: automatic device/billing updates, foreground/network recovery, three models, keyboard controls, settings drafts, history, one combined scan, hidden advanced fields, subnet selection, protected addresses, Escape and 320–1440px.');
  } finally {
   await browser.close();for(const f of fixtures)await f.close();
   if(child.exitCode===null){child.kill();await new Promise(resolve=>child.once('exit',resolve));}

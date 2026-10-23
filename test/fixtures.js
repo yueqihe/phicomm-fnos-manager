@@ -57,5 +57,5 @@ export async function freePort() {
 }
 export async function until(fn, timeout = 8000) {
   const deadline = Date.now() + timeout;
-  while (!fn()) { if (Date.now() > deadline) throw new Error('condition timed out'); await new Promise(resolve => setTimeout(resolve, 25)); }
+  while (!(await fn())) { if (Date.now() > deadline) throw new Error('condition timed out'); await new Promise(resolve => setTimeout(resolve, 25)); }
 }
