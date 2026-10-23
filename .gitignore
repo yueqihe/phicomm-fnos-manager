@@ -4,6 +4,12 @@
 /test-results/
 /build/
 /release/
+/TC1/
+/M1/
+/A1/
+/phicomm-io.github.io/
+/phicomm-community-frontend/
+/phicomm-community-mqtt/
 __pycache__/
 *.py[cod]
 *.log

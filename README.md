@@ -107,6 +107,8 @@ go run . --dev --listen 127.0.0.1:8800 --base / --data ./dev-data
 
 本工具根据 [phicomm-io](https://github.com/phicomm-io/) 社区项目的设备协议、固件生态和公开资料制作，面向 fnOS 提供独立管理界面。设备需使用兼容的社区固件，原厂固件不保证可接入。
 
+本仓库只发布 fnOS 管理端及其构建、测试文件，不包含上游设备固件、SDK 或 `phicomm-io.github.io` 站点源码。FPK 也不附带这些原项目源码；以下链接用于说明项目来源和查阅设备资料。
+
 - [社区文档、设备资料与下载](https://phicomm-io.github.io/)
 - [phicomm-community-frontend](https://github.com/phicomm-io/phicomm-community-frontend)
 - [phicomm-community-mqtt](https://github.com/phicomm-io/phicomm-community-mqtt)
