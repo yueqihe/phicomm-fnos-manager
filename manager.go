@@ -537,6 +537,11 @@ func (m *Manager) remove(id string) error {
 }
 func matches(s Obj, action string, p Obj) bool {
 	switch action {
+	case "config.set":
+		values := obj(p["values"])
+		index := int(num(values["index"]))
+		names := arr(s["outletNames"])
+		return p["section"] == "socket" && index >= 0 && index < len(names) && names[index] == values["name"]
 	case "outlet.set":
 		outlets := arr(s["outlets"])
 		if len(outlets) != 6 {
@@ -589,7 +594,7 @@ func (m *Manager) write(ctx context.Context, e *deviceEntry, action string, p Ob
 		m.mu.Unlock()
 		return nil, failure("设备暂时离线，无法控制", 409, "offline")
 	}
-	if action != "config.set" && !contains(e.r.actions, action) {
+	if (action != "config.set" || p["section"] == "socket") && !contains(e.r.actions, action) {
 		m.mu.Unlock()
 		return nil, failure("当前固件未声明支持此操作", 422, "unsupported")
 	}
@@ -639,6 +644,12 @@ func (m *Manager) write(ctx context.Context, e *deviceEntry, action string, p Ob
 	if confirmed {
 		outcome = "confirmed"
 		message = "设备状态已确认"
+	}
+	if action == "config.set" && p["section"] == "socket" {
+		message = "设备已接收，插口名称等待确认"
+		if confirmed {
+			message = "插口名称已同步到设备"
+		}
 	}
 	m.store.log(e.d, action, outcome, message)
 	return Obj{"code": response["code"], "confirmed": confirmed, "device": m.public(e), "message": message}, nil

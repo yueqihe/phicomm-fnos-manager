@@ -97,6 +97,16 @@
 #manager .pm-outlets{display:grid;grid-template-columns:1fr 1fr;column-gap:19px}
 #manager .pm-outlet{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:11px 0;border-bottom:1px solid var(--pm-line)}
 #manager .pm-outlet-name{font-size:11px;display:block}
+#manager .pm-outlet-label{min-width:0;flex:1}
+#manager .pm-outlet-rename{display:flex;align-items:center;gap:5px;max-width:100%;min-height:28px;padding:0;border:0;background:transparent;text-align:left;color:var(--pm-ink)}
+#manager .pm-outlet-rename:hover{color:var(--pm-accent)}
+#manager .pm-outlet-rename:disabled{opacity:1;color:var(--pm-muted)}
+#manager .pm-outlet-rename .pm-outlet-name{overflow-wrap:anywhere;min-width:0}
+#manager .pm-outlet-rename svg{width:12px;height:12px;color:var(--pm-muted)}
+#manager .pm-outlet-editor{grid-column:1/-1;min-width:0;padding:12px 0;border-bottom:1px solid var(--pm-line)}
+#manager .pm-outlet-editor>label{display:block;font-size:12px;margin-bottom:7px}
+#manager .pm-outlet-editor-actions{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+#manager .pm-outlet-editor-actions>span{margin-right:auto}
 #manager .pm-outlet-id{font:9px Consolas,monospace;color:var(--pm-muted);display:block;margin-top:3px}
 #manager .pm-detail-connection{display:flex;align-items:center;justify-content:space-between;gap:9px;margin-top:19px;font-size:10px;color:var(--pm-muted)}
 #manager .pm-text-action{border:0;background:transparent;color:var(--pm-muted);padding:4px 0;font-size:10px;display:inline-flex;align-items:center;gap:4px}
@@ -154,6 +164,11 @@
 #manager .pm-tile-value{font-size:29px;letter-spacing:-.7px;font-weight:350}
 #manager .pm-tile-value small{font-size:11px;color:var(--pm-muted);letter-spacing:0;margin-left:4px}
 #manager .pm-tile-bottom{display:flex;align-items:center;justify-content:space-between;min-height:34px;border-top:1px solid var(--pm-line);padding-top:10px;margin:0 20px 16px}
+#manager .pm-tile-energy{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 20px 14px;font-size:12px;color:var(--pm-muted)}
+#manager .pm-tile-energy>div{display:grid;gap:4px;min-width:0;overflow-wrap:anywhere}
+#manager .pm-tile-energy strong{font-weight:500;color:var(--pm-ink);font-variant-numeric:tabular-nums}
+#manager .pm-tile-energy [data-energy-cost]{font-size:11px;font-variant-numeric:tabular-nums}
+#manager .pm-tile-energy .pm-text-action{min-height:36px;flex-shrink:0;font-size:11px}
 #manager .pm-toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);padding:10px 16px;background:var(--pm-toast-bg);color:var(--pm-toast-ink);border-radius:5px;font-size:12px;z-index:8;box-shadow:0 5px 18px #00000012;max-width:calc(100% - 30px);width:max-content;text-align:center}
 #manager dialog{width:min(420px,calc(100% - 24px));max-height:calc(100dvh - 24px);overflow:hidden;padding:0;border:1px solid var(--pm-line);border-radius:9px;background:var(--pm-paper);color:var(--pm-ink);box-shadow:0 20px 80px #13192424;position:absolute;inset:0;margin:auto}
 #manager dialog form{display:flex;flex-direction:column;max-height:calc(100dvh - 26px)}
@@ -222,6 +237,8 @@
   #manager .pm-outlet>span{min-width:0}
   #manager .pm-outlet-name{font-size:12px;overflow-wrap:anywhere}
   #manager .pm-outlet-id{font-size:11px}
+  #manager .pm-outlet-rename{min-height:44px}
+  #manager .pm-outlet-editor .pm-btn{min-height:44px}
   #manager .pm-detail-connection{flex-wrap:wrap}
   #manager .pm-mode,#manager .pm-range-label{font-size:12px}
   #manager .pm-bottom{align-items:flex-start}
@@ -234,6 +251,8 @@
   #manager .pm-tile-value{align-self:center;font-size:24px}
   #manager .pm-tile-value small{font-size:11px}
   #manager .pm-tile-bottom{margin:0 15px 12px}
+  #manager .pm-tile-energy{margin:0 15px 12px}
+  #manager .pm-tile-energy .pm-text-action{min-height:44px}
   #manager .pm-room-header{padding:0 0 10px}
   #manager .pm-event{grid-template-columns:60px minmax(0,1fr);gap:8px}
   #manager .pm-event>span{overflow-wrap:anywhere}

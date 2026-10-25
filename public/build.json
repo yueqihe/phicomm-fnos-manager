@@ -1,21 +1,21 @@
 {
   "framework": "React",
   "sources": {
-    "package.json": "a7baeea5e4d0cc13df80afe14b04535c8b5b713aa0e10869cc231cea264a13a7",
-    "package-lock.json": "ed11f527ceae0ce27c4d063ed081e57f643c090977bef049b885e05b99427a0a",
+    "package.json": "34d80683fda40d1fe1273b39d64b57c04d11ed4c39a5d215398160b8d4083d0d",
+    "package-lock.json": "2f4c123eb7e88d83869f689dba52feceeb43c3341c3baf3ab750f26bde849aa3",
     "scripts/build-web.mjs": "a45f804debf8d11fd428a408a2d5639a0fa52197c6367516020e5ff831d29b92",
-    "frontend/app.jsx": "56a7db050b1e0e6d8e754676b713ad62abb36da0ccc74a093eb4636b051e5a10",
-    "frontend/devices.jsx": "81efca8d9853c179988d044baa4ef29649124bdec6681e3a9a195a6bafde0a92",
+    "frontend/app.jsx": "9b0739b366966a15eb862f1dc09a777e1d3000c31dd5b39cabda4d0558e4d429",
+    "frontend/devices.jsx": "bd8a7940a7a7392cb2819b78a3b188b7107719940c2dad1f38e0767f66979b9b",
     "frontend/dialogs.jsx": "6ad0ddb1a7058777272a714b29abfc0e5f38304d92033a216e59244928464f0e",
     "frontend/discovery.jsx": "0a92d05d2a3253130b5875315c3d2e72d07e994931a7f1530b99810ec5ffb7c4",
-    "frontend/styles.css": "6df613a1ee3bbec6cedf797f7d7b9969028dc7c8fd1336ebdeb5fffc9c3e1458",
+    "frontend/styles.css": "2f06ca074b96810ad9cfacee4bfa8ff61a8f49e7b6b8a3184646777f1503bcd9",
     "frontend/theme.js": "8b00bc953b8ef66982b69d4bcbbfae90484f35c12ed803df30f8bc3cec94d476",
-    "frontend/ui.jsx": "d21ded8378e68c7fd8e70b7a8ead14c6bef2dc8218b5edbca442230b1efe272e"
+    "frontend/ui.jsx": "d01539470d19720db75a34302bf0ff17d3bd74cc3986fe2e1989b37f3047f0bd"
   },
   "assets": {
     "public/index.html": "a3cb63f07bd24dbbb0731a11675aa75f4d60571227c54f7c34e3a16f95dfbf8b",
-    "public/app.js": "d78796de29aafd2a6d85f4dbd0a30ecff897784dc79d14f8cec843494e9ca441",
-    "public/styles.css": "6df613a1ee3bbec6cedf797f7d7b9969028dc7c8fd1336ebdeb5fffc9c3e1458",
+    "public/app.js": "911e43b93e058afc271a5aa4dc65c4c0866d8d9e67817037f422956e9eade8ed",
+    "public/styles.css": "2f06ca074b96810ad9cfacee4bfa8ff61a8f49e7b6b8a3184646777f1503bcd9",
     "public/licenses/react.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
     "public/licenses/react-dom.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
     "public/licenses/scheduler.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",

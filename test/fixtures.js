@@ -21,7 +21,7 @@ export function firmware(model = 'TC1', mac = 'aabbcc000001', { unsupportedActio
       case 'capabilities.get': data = capabilities; code = 'ok'; break;
       case 'power.get': data = power; code = 'ok'; break;
       case 'config.get': data = config; code = 'ok'; break;
-      case 'config.set': config = structuredClone(p); break;
+      case 'config.set': config = structuredClone(p); if (model === 'TC1' && p.section === 'socket') state.socket_names[p.values.index] = p.values.name; break;
       case 'outlet.set': if (p.index === undefined) state.socket_states.fill(p.on ? 1 : 0); else state.socket_states[p.index] = p.on ? 1 : 0; break;
       case 'display.set': state.brightness_requested = p.brightness / 25; break;
       case 'fan.mode.set': state.fan_mode = p.mode; break;

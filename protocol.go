@@ -324,6 +324,14 @@ func validateControl(model, action string, p Obj) error {
 	switch {
 	case model == "TC1" && action == "outlet.set":
 		ok = allowed("index", "on") && isBool("on") && (!has("index") || integer("index", 0, 5))
+	case model == "TC1" && action == "config.set":
+		values := obj(p["values"])
+		name, validName := values["name"].(string)
+		index, validIndex := values["index"].(float64)
+		ok = allowed("section", "values") && p["section"] == "socket" && len(values) == 2 &&
+			validIndex && index >= 0 && index <= 5 && math.Trunc(index) == index &&
+			validName && utf8.ValidString(name) && strings.TrimSpace(name) != "" && len(name) <= 63 &&
+			strings.IndexFunc(name, func(r rune) bool { return r < 32 || r == 127 }) < 0
 	case model == "M1" && action == "display.set":
 		ok = allowed("brightness") && integer("brightness", 0, 100) && int(num(p["brightness"]))%25 == 0
 	case model == "A1" && action == "fan.set":

@@ -53,6 +53,12 @@ const assert = require('node:assert/strict');
   await page.getByRole('switch',{name:'客厅排插插口 1',exact:true}).click();
   await page.waitForFunction(()=>document.querySelector('[data-action="outlet.set"][data-index="0"]').getAttribute('aria-checked')==='true');
   assert.equal(fixtures[0].state.socket_states[0],1);
+  await page.getByRole('button',{name:'修改插口 1 名称',exact:true}).click();
+  await page.getByLabel('插口 01 名称',{exact:true}).fill('电视 & 音箱');
+  await page.getByRole('button',{name:'保存名称',exact:true}).click();
+  await page.getByRole('button',{name:'修改插口 1 名称',exact:true}).filter({hasText:'电视 & 音箱'}).waitFor();
+  assert.equal(fixtures[0].state.socket_names[0],'电视 & 音箱');
+  assert.equal(fixtures[0].calls.filter(c=>c.action==='config.set'&&c.params.section==='socket').length,1);
   await page.getByRole('button',{name:'电价设置',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'设置',exact:true});
   await settings.getByLabel('计费方式',{exact:true}).selectOption('flat');await settings.getByLabel('当前电价（元/度）',{exact:true}).fill('0.6');
@@ -60,11 +66,12 @@ const assert = require('node:assert/strict');
   await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
   assert.equal(await page.getByRole('button',{name:'刷新',exact:true}).count(),0);
   await page.getByText('预估消费 ¥0.00',{exact:false}).waitFor({timeout:25000});
-  fixtures[0].power.energy_kwh=3.23;fixtures[0].power.power_watts=43.2;fixtures[0].state.socket_states[1]=1;
+  fixtures[0].power.energy_kwh=3.23;fixtures[0].power.power_watts=43.2;fixtures[0].state.socket_states[1]=1;fixtures[0].state.socket_names[0]='设备网页电视';
   // Device changes reach the page through background collection and synchronization alone.
   await page.getByText('预估消费 ¥1.20',{exact:false}).waitFor({timeout:25000});
   assert.equal(await page.locator('.pm-measurements .pm-metric-value').first().textContent(),'43.2W');
   assert.equal(await page.getByRole('switch',{name:'客厅排插插口 2',exact:true}).getAttribute('aria-checked'),'true');
+  await page.getByRole('button',{name:'修改插口 1 名称',exact:true}).filter({hasText:'设备网页电视'}).waitFor();
   // Simulate a suspended mobile page while the real backend keeps collecting.
   await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
   fixtures[0].power.power_watts=51.7;
@@ -84,9 +91,49 @@ const assert = require('node:assert/strict');
   await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
   await page.getByRole('button',{name:'历史记录',exact:true}).click();const history=page.getByRole('dialog',{name:'历史记录',exact:true});await history.locator('.pm-event').first().waitFor();await history.getByRole('button',{name:'关闭历史记录',exact:true}).click();
   await page.getByRole('button',{name:'空间',exact:true}).click();
+  const tile=page.locator('.pm-tile').filter({has:page.locator('[data-open-control="tc1-aabbcc000201"]')});
+  await tile.getByText('累计用电',{exact:false}).waitFor();
+  assert.ok((await tile.textContent()).includes('3.23 度'));
+  await tile.getByText('预估消费 ¥1.20',{exact:false}).waitFor();
+  assert.ok((await tile.locator('.pm-tile-value').textContent()).includes('51.7W'));
+  await tile.getByRole('button',{name:'客厅排插电价设置',exact:true}).click();
+  await settings.getByLabel('计费方式',{exact:true}).waitFor();
+  await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
   for(const width of [320,390,768,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
   await page.setViewportSize({width:390,height:844});await page.locator('[data-open-control="tc1-aabbcc000201"]').click();
   const control=page.getByRole('dialog',{name:'设备控制',exact:true});await control.getByText('预估消费 ¥1.20',{exact:false}).waitFor();
+  await control.getByRole('button',{name:'修改插口 1 名称',exact:true}).filter({hasText:'设备网页电视'}).waitFor();
+  await control.getByRole('button',{name:'修改插口 2 名称',exact:true}).click();
+  const outletName=control.getByLabel('插口 02 名称',{exact:true});
+  await outletName.fill('电脑与显示器');
+  // A background update must not replace an in-progress rename.
+  fixtures[0].state.socket_names[1]='设备网页电脑';
+  await until(async()=>{const data=await (await fetch(`${url}api/devices`)).json();return data.devices.find(d=>d.id==='tc1-aabbcc000201').state.outletNames[1]==='设备网页电脑';},25000);
+  await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+  assert.equal(await outletName.inputValue(),'电脑与显示器');
+  const failedRename=route=>route.fulfill({status:502,json:{error:'测试：设备写入失败'}});
+  await context.route('**/api/devices/tc1-aabbcc000201/control',failedRename);
+  await control.getByRole('button',{name:'保存名称',exact:true}).click();
+  await control.getByText('测试：设备写入失败',{exact:true}).waitFor();
+  assert.equal(await outletName.inputValue(),'电脑与显示器');
+  assert.equal(fixtures[0].state.socket_names[1],'设备网页电脑');
+  await context.unroute('**/api/devices/tc1-aabbcc000201/control',failedRename);
+  await control.getByRole('button',{name:'保存名称',exact:true}).click();
+  await control.getByRole('button',{name:'修改插口 2 名称',exact:true}).filter({hasText:'电脑与显示器'}).waitFor();
+  assert.equal(fixtures[0].state.socket_names[1],'电脑与显示器');
+  await control.getByRole('button',{name:'修改插口 2 名称',exact:true}).click();
+  await outletName.fill('电'.repeat(22));await control.getByRole('button',{name:'保存名称',exact:true}).click();
+  await control.getByRole('alert').filter({hasText:'名称过长'}).waitFor();
+  await outletName.fill('   ');await control.getByRole('button',{name:'保存名称',exact:true}).click();
+  await control.getByRole('alert').filter({hasText:'请输入插口名称'}).waitFor();
+  await outletName.press('Escape');assert.equal(await control.isVisible(),true);
+  assert.equal(await outletName.count(),0);assert.equal(fixtures[0].state.socket_names[1],'电脑与显示器');
+  await control.getByRole('button',{name:'修改插口 2 名称',exact:true}).click();
+  await outletName.fill('电视与音响、电脑显示器及充电器');
+  for(const width of [320,390,768,1440]) {await page.setViewportSize({width,height:900});assert.equal(await control.evaluate(el=>el.scrollWidth>el.clientWidth),false);}
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:path.join(output,'room-outlet-rename-mobile.png'),fullPage:true});
+  await control.getByRole('button',{name:'取消',exact:true}).click();
   await page.screenshot({path:path.join(output,'go-billing-mobile.png'),fullPage:true});
   await control.getByRole('button',{name:'电价设置',exact:true}).click();await settings.getByLabel('计费方式',{exact:true}).waitFor();
   for(const viewport of [{width:320,height:568},{width:390,height:844},{width:740,height:360}]){await page.setViewportSize(viewport);const box=await settings.evaluate(el=>({top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,footer:el.querySelector('.pm-dialog-footer').getBoundingClientRect().bottom,height:innerHeight,overflow:el.scrollWidth>el.clientWidth}));assert.ok(box.top>=0&&box.bottom<=box.height+1&&box.footer<=box.height,JSON.stringify(box));assert.equal(box.overflow,false);}
@@ -163,6 +210,7 @@ const assert = require('node:assert/strict');
   await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
   await page.getByRole('button',{name:'列表',exact:true}).click();
   await page.locator('[data-device="tc1-aabbcc000201"]').click();
+  await page.getByRole('button',{name:'修改插口 2 名称',exact:true}).filter({hasText:'电脑与显示器'}).waitFor();
   await page.screenshot({path:path.join(output,'theme-dark-desktop.png'),fullPage:true});
   for(const width of [320,390,700,768,900,1440]){await page.setViewportSize({width,height:900});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);}
   await page.setViewportSize({width:390,height:844});
@@ -196,7 +244,7 @@ const assert = require('node:assert/strict');
   assert.equal(await first.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'dark');
   await fresh.close();
   assert.deepEqual(errors,[]);
-  console.log('Go + React browser passed: light/dark/system themes, persisted preferences, modal colors and drafts, automatic device/billing updates, foreground/network recovery, three models, keyboard controls, history, combined scan, Escape and 320–1440px.');
+  console.log('Go + React browser passed: room power/energy/cost and tariff entry, bidirectional outlet names, failed writes and draft preservation, light/dark/system themes, automatic updates, three models, discovery and 320–1440px.');
  } finally {
   await browser.close();for(const f of fixtures)await f.close();
   if(child.exitCode===null){child.kill();await new Promise(resolve=>child.once('exit',resolve));}

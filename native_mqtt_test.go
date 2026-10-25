@@ -69,6 +69,7 @@ func TestMQTTEmbeddedRESTDiscoveryControlAndACL(t *testing.T) {
 	state := Obj{"model": "tc1", "device_id": mac, "socket_states": []any{float64(0), float64(0), float64(0), float64(0), float64(0), float64(0)}}
 	var mu sync.Mutex
 	writes := 0
+	renames := 0
 	badRetain := false
 	token := c.Subscribe(base+"/command", 1, func(_ paho.Client, msg paho.Message) {
 		mu.Lock()
@@ -82,7 +83,7 @@ func TestMQTTEmbeddedRESTDiscoveryControlAndACL(t *testing.T) {
 		case "status.get":
 			resultData = state
 		case "capabilities.get":
-			resultData = Obj{"model": "tc1", "actions": []string{"outlet.set", "power.get"}}
+			resultData = Obj{"model": "tc1", "actions": []string{"outlet.set", "power.get", "config.set"}}
 		case "power.get":
 			resultData = Obj{"power_watts": 20.0, "energy_kwh": 1.23}
 		case "outlet.set":
@@ -90,6 +91,15 @@ func TestMQTTEmbeddedRESTDiscoveryControlAndACL(t *testing.T) {
 			badRetain = badRetain || msg.Retained()
 			p := obj(request["params"])
 			arr(state["socket_states"])[int(num(p["index"]))] = float64(1)
+			code = "accepted"
+		case "config.set":
+			renames++
+			badRetain = badRetain || msg.Retained()
+			values := obj(obj(request["params"])["values"])
+			state["socket_names"] = []string{"一", "二", "三", "四", "五", "六"}
+			names := arr(state["socket_names"])
+			names[int(num(values["index"]))] = values["name"]
+			state["socket_names"] = names
 			code = "accepted"
 		}
 		raw, _ := json.Marshal(Obj{"request_id": request["request_id"], "code": code, "data": resultData})
@@ -115,6 +125,21 @@ func TestMQTTEmbeddedRESTDiscoveryControlAndACL(t *testing.T) {
 		t.Fatal("MQTT write repeated or retained")
 	}
 	mu.Unlock()
+	status, data = requestJSON(t, server, "devices/tc1-"+mac+"/control", "POST", Obj{"action": "config.set", "params": Obj{"section": "socket", "values": Obj{"index": 4.0, "name": "MQTT 电视"}}})
+	if status != 200 || !boolean(data["confirmed"]) || arr(obj(obj(data["device"])["state"])["outletNames"])[4] != "MQTT 电视" {
+		t.Fatal("MQTT rename not confirmed", status, data)
+	}
+	mu.Lock()
+	if renames != 1 || badRetain {
+		t.Fatal("MQTT rename repeated or retained")
+	}
+	names := arr(state["socket_names"])
+	names[4] = "设备网页改名"
+	state["socket_names"] = names
+	externalState := clone(state)
+	mu.Unlock()
+	publishTest(t, c, base+"/state", externalState, false)
+	waitUntil(t, func() bool { return arr(obj(m.list()[0]["state"])["outletNames"])[4] == "设备网页改名" })
 	requestJSON(t, server, "settings/tariff", "PUT", Obj{"mode": "flat", "flatRate": 0.6})
 	requestJSON(t, server, "devices/tc1-"+mac+"/refresh", "POST", Obj{})
 	near(t, num(obj(m.list()[0]["billing"])["cost"]), 0)

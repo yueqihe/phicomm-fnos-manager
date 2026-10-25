@@ -46,7 +46,7 @@ function App() {
   const replace=device => setDevices(old => old.map(d => d.id === device.id ? device : d));
   const control=async (d,action,params) => {
     if(busyRef.current.has(d.id)) return;changeBusy(d.id,true);
-    try {const data=await api(`devices/${d.id}/control`,json('POST',{action,params}));replace(data.device);notify(data.message);}
+    try {const data=await api(`devices/${d.id}/control`,json('POST',{action,params}));replace(data.device);notify(data.message);return data;}
     catch(e) {notify(e.message,true);}
     finally {changeBusy(d.id,false);await sync().catch(() => {});}
   };

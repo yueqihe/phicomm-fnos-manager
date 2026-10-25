@@ -30,6 +30,7 @@ func firmwareFixture(t *testing.T, model, mac string) *testFirmware {
 	switch model {
 	case "TC1":
 		f.state["socket_states"] = []any{float64(0), float64(0), float64(0), float64(0), float64(0), float64(0)}
+		f.state["socket_names"] = []string{"插口 1", "插口 2", "插口 3", "插口 4", "插口 5", "插口 6"}
 		f.actions = append(f.actions, "outlet.set", "power.get", "indicator.set", "child_lock.set")
 	case "M1":
 		f.state["brightness_requested"] = float64(2)
@@ -126,6 +127,12 @@ func (f *testFirmware) command(request Obj) Obj {
 	case "child_lock.set":
 		f.state["child_lock"] = p["enabled"]
 	case "config.set":
+		if p["section"] == "socket" {
+			values := obj(p["values"])
+			names := arr(f.state["socket_names"])
+			names[int(num(values["index"]))] = values["name"]
+			f.state["socket_names"] = names
+		}
 		code = "accepted"
 	default:
 		code = "unsupported"
@@ -274,6 +281,59 @@ func TestLANAndBillingREST(t *testing.T) {
 		t.Fatal("unexpected password")
 	}
 	m.mu.RUnlock()
+}
+func TestSocketNameSyncREST(t *testing.T) {
+	m, _, server := testManager(t)
+	f := firmwareFixture(t, "TC1", "aabbcc000080")
+	_, added := requestJSON(t, server, "devices", "POST", Obj{"model": "TC1", "method": "lan", "address": f.server.URL})
+	id := str(obj(added["device"])["id"])
+	path := "devices/" + id + "/control"
+	for _, name := range []string{"电视 & 音箱", strings.Repeat("电", 21), strings.Repeat("a", 63)} {
+		status, data := requestJSON(t, server, path, "POST", Obj{"action": "config.set", "params": Obj{"section": "socket", "values": Obj{"index": 2.0, "name": name}}})
+		if status != 200 || !boolean(data["confirmed"]) || arr(obj(obj(data["device"])["state"])["outletNames"])[2] != name {
+			t.Fatal("rename not confirmed", status, data)
+		}
+		f.mu.Lock()
+		stored := arr(f.state["socket_names"])[2]
+		f.mu.Unlock()
+		if stored != name {
+			t.Fatal("device configuration not updated", stored)
+		}
+	}
+	for _, values := range []Obj{
+		{"index": -1.0, "name": "a"}, {"index": 6.0, "name": "a"}, {"index": 0.5, "name": "a"}, {"index": "0", "name": "a"},
+		{"name": "a"}, {"index": 0.0}, {"index": 0.0, "name": true}, {"index": 0.0, "name": ""}, {"index": 0.0, "name": "  "},
+		{"index": 0.0, "name": "a\x00b"}, {"index": 0.0, "name": "a\nb"}, {"index": 0.0, "name": strings.Repeat("a", 64)},
+		{"index": 0.0, "name": strings.Repeat("电", 22)}, {"index": 0.0, "name": "a", "extra": true},
+	} {
+		status, data := requestJSON(t, server, path, "POST", Obj{"action": "config.set", "params": Obj{"section": "socket", "values": values}})
+		if status != 400 {
+			t.Fatal("invalid socket configuration accepted", status, data)
+		}
+	}
+	status, data := requestJSON(t, server, path, "POST", Obj{"action": "config.set", "params": Obj{"section": "auth", "values": Obj{"password": "a"}}})
+	if status != 400 {
+		t.Fatal("unrelated configuration allowed", status, data)
+	}
+	f.mu.Lock()
+	arr(f.state["socket_names"])[2] = "原网页改名"
+	f.mu.Unlock()
+	m.pollAll()
+	_, data = requestJSON(t, server, "devices", "GET", nil)
+	if arr(obj(arr(data["devices"])[0].(Obj)["state"])["outletNames"])[2] != "原网页改名" {
+		t.Fatal("external rename not synchronized", data)
+	}
+	f.mu.Lock()
+	f.actions = []string{"outlet.set", "power.get", "status.get", "capabilities.get"}
+	f.mu.Unlock()
+	m.pollAll()
+	status, data = requestJSON(t, server, path, "POST", Obj{"action": "config.set", "params": Obj{"section": "socket", "values": Obj{"index": 2.0, "name": "unsupported"}}})
+	if status != 422 {
+		t.Fatal("undeclared capability accepted", status, data)
+	}
+	if matches(Obj{"outletNames": []string{"old"}}, "config.set", Obj{"section": "socket", "values": Obj{"index": 0.0, "name": "new"}}) {
+		t.Fatal("stale device name confirmed")
+	}
 }
 func TestThreeModelsAndIdentityGuard(t *testing.T) {
 	_, _, server := testManager(t)

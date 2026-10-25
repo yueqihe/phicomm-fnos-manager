@@ -1,6 +1,6 @@
 {
   "name": "phicomm-native-manager",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "author": { "name": "情深深雨蒙蒙", "url": "https://github.com/yueqihe" },
   "repository": { "type": "git", "url": "https://github.com/yueqihe/phicomm-fnos-manager.git" },
