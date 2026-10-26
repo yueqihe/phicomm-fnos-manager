@@ -7,16 +7,17 @@ export function firmware(model = 'TC1', mac = 'aabbcc000001', { unsupportedActio
     model: model.toLowerCase(), device_id: mac, version: 'test-fixture', name: `测试 ${model}`,
     ...(model === 'TC1' ? { socket_states: [0, 0, 0, 0, 0, 0], socket_names: ['一', '二', '三', '四', '五', '六'], led_enabled: true, child_lock: false } : {}),
     ...(model === 'M1' ? { brightness_requested: 2, sensor_valid: true, temperature: 24.5, humidity: 51, pm25: 12, formaldehyde: 0.012, scd40: { valid: false, co2_ppm: null } } : {}),
-    ...(model === 'A1' ? { fan_on: false, fan_mode: 'manual', fan_state: 'off', speed: 35, percentage: 0, applied_speed: 0, auto_max_speed: 80, fan_ready: true, led_enabled: true, filter: { remaining_percent: 92, replacement_due: false }, child_lock: false } : {})
+    ...(model === 'A1' ? { fan_on: false, fan_mode: 'manual', fan_state: 'off', speed: 35, percentage: 0, applied_speed: 0, auto_max_speed: 80, fan_ready: true, led_enabled: true, filter: { remaining_percent: 92, replacement_due: false }, child_lock: false } : {}),
+    ...(model === 'DAIKIN' ? { hardware_model:'BRY88AX151K',indicator_enabled:true,formaldehyde_present:false,co2_warmup_seconds_remaining:0,sensors:Object.fromEntries(Object.entries({pm25:12,pm10:18,co2:650,temperature:24.5,humidity:51,tvoc:0}).map(([key,value]) => [key,{valid:true,value,age_ms:1000}])) } : {})
   };
-  const actions = ['status.get', 'capabilities.get', 'config.get', 'config.set', ...(model === 'TC1' ? ['outlet.set', 'indicator.set', 'power.get', 'child_lock.set'] : model === 'M1' ? ['display.set'] : ['fan.set', 'fan.mode.set', 'light.set', 'child_lock.set'])];
+  const actions = ['status.get', 'capabilities.get', 'config.get', 'config.set', ...(model === 'TC1' ? ['outlet.set', 'indicator.set', 'power.get', 'child_lock.set'] : model === 'M1' ? ['display.set'] : model === 'DAIKIN' ? ['indicator.set'] : ['fan.set', 'fan.mode.set', 'light.set', 'child_lock.set'])];
   const capabilities = { model: model.toLowerCase(), actions };
   const calls = [], power = { power_watts: 23.4, energy_kwh: 1.23 }; let config = {};
   function command(req) {
     calls.push(structuredClone(req)); const p = req.params || {}; let data = null, code = 'accepted';
     if (unsupportedActions.includes(req.action)) return { request_id: req.request_id, code: 'unsupported', message: 'unsupported', data: null };
     switch (req.action) {
-      case 'info.get': data = { model: state.model, device_id: state.device_id, version: state.version }; code = 'ok'; break;
+      case 'info.get': if(model === 'DAIKIN') {code='unsupported_action';break;} data = { model: state.model, device_id: state.device_id, version: state.version }; code = 'ok'; break;
       case 'status.get': data = state; code = 'ok'; break;
       case 'capabilities.get': data = capabilities; code = 'ok'; break;
       case 'power.get': data = power; code = 'ok'; break;
@@ -30,7 +31,7 @@ export function firmware(model = 'TC1', mac = 'aabbcc000001', { unsupportedActio
         if (p.on !== undefined) state.fan_on = p.on;
         if (p.speed !== undefined) { if (state.fan_mode === 'auto') state.auto_max_speed = p.speed; else state.speed = p.speed; state.fan_on = p.speed > 0; }
         state.percentage = state.fan_on ? state.speed : 0; state.applied_speed = state.percentage; state.fan_state = state.fan_on ? 'running' : 'off'; break;
-      case 'light.set': case 'indicator.set': state.led_enabled = p.enabled; break;
+      case 'light.set': case 'indicator.set': if(model === 'DAIKIN') state.indicator_enabled=p.enabled;else state.led_enabled = p.enabled; break;
       case 'child_lock.set': state.child_lock = p.enabled; break;
       default: code = 'unsupported';
     }

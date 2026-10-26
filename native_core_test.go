@@ -37,6 +37,15 @@ func firmwareFixture(t *testing.T, model, mac string) *testFirmware {
 		f.state["sensor_valid"] = true
 		f.state["pm25"] = float64(12)
 		f.actions = append(f.actions, "display.set")
+	case "DAIKIN":
+		f.state["hardware_model"] = "BRY88AX151K"
+		f.state["indicator_enabled"] = true
+		f.state["formaldehyde_present"] = false
+		f.state["sensors"] = Obj{}
+		for key, value := range map[string]float64{"pm25": 12, "pm10": 18, "co2": 650, "temperature": 24.5, "humidity": 51, "tvoc": 0} {
+			obj(f.state["sensors"])[key] = Obj{"valid": true, "value": value, "age_ms": float64(1000)}
+		}
+		f.actions = append(f.actions, "indicator.set")
 	case "A1":
 		f.state["fan_on"] = false
 		f.state["fan_mode"] = "manual"
@@ -78,7 +87,9 @@ func (f *testFirmware) command(request Obj) Obj {
 	var data any
 	switch action {
 	case "info.get":
-		if f.legacy {
+		if f.state["model"] == "daikin" {
+			code = "unsupported_action"
+		} else if f.legacy {
 			code = "unsupported"
 		} else {
 			data = f.state
@@ -124,6 +135,9 @@ func (f *testFirmware) command(request Obj) Obj {
 		f.state["fan_mode"] = p["mode"]
 	case "indicator.set", "light.set":
 		f.state["led_enabled"] = p["enabled"]
+		if f.state["model"] == "daikin" {
+			f.state["indicator_enabled"] = p["enabled"]
+		}
 	case "child_lock.set":
 		f.state["child_lock"] = p["enabled"]
 	case "config.set":

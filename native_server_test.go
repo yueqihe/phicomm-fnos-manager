@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -146,5 +148,45 @@ func TestRealUnixSocketGatewayAndReadiness(t *testing.T) {
 		if res.StatusCode != value.status {
 			t.Fatal(value, res.StatusCode)
 		}
+	}
+	// Exercise LAN browser origins through the real Unix gateway connection,
+	// with Host rewritten and no X-Forwarded-Host provided by the proxy.
+	request := func(method, endpoint, body, token string) (int, Obj) {
+		t.Helper()
+		req, _ := http.NewRequest(method, "http://internal-gateway/app/phicomm-manager/api/"+endpoint, strings.NewReader(body))
+		req.Header.Set("X-Trim-Userid", "1000")
+		req.Header.Set("X-Trim-Isadmin", "true")
+		req.Header.Set("Origin", "http://192.168.1.9:5666")
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Manager-CSRF", token)
+		res, err := client.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		var data Obj
+		if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+			t.Fatal(err)
+		}
+		return res.StatusCode, data
+	}
+	status, session := request("GET", "session", "", "")
+	if status != 200 || !boolean(session["authenticated"]) || len(str(session["csrfToken"])) != 64 {
+		t.Fatal("gateway session token unavailable")
+	}
+	token := str(session["csrfToken"])
+	if status, _ := request("PUT", "settings/tariff", `{"mode":"disabled"}`, token); status != 200 {
+		t.Fatal("LAN gateway configuration rejected", status)
+	}
+	a.discovery.interfaces = func() []Adapter { return nil }
+	a.discovery.probe = func(context.Context, string, string, int) bool { return false }
+	if status, _ := request("POST", "discovery", `{"mode":"lan","cidr":"10.2.3.4"}`, token); status != 202 {
+		t.Fatal("LAN gateway manual discovery rejected", status)
+	}
+	if status, _ := request("DELETE", "discovery", "", token); status != 200 {
+		t.Fatal("LAN gateway discovery cancellation rejected", status)
+	}
+	if status, data := request("PUT", "settings/tariff", `{"mode":"disabled"}`, ""); status != 403 || data["code"] != "invalid_origin" {
+		t.Fatal("unverified gateway write accepted", status)
 	}
 }

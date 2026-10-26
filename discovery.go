@@ -53,12 +53,10 @@ func localInterfaces() []Adapter {
 			out = append(out, Adapter{ip.String(), iface.Name + " · " + ip.String(), ip.String(), fmt.Sprintf("%s/%d", ip.String(), prefix), iface.Index})
 		}
 	}
-	// UDP connect consults the routing table; no packet is sent without Write.
-	preferred := ""
-	if conn, err := net.DialUDP("udp4", nil, &net.UDPAddr{IP: net.IPv4(192, 0, 2, 1), Port: 9}); err == nil {
-		preferred = conn.LocalAddr().(*net.UDPAddr).IP.String()
-		conn.Close()
+	if len(out) == 0 {
+		out = fallbackInterfaces()
 	}
+	preferred := routeSourceIP(net.IPv4(192, 0, 2, 1)).String()
 	sort.SliceStable(out, func(i, j int) bool {
 		if (out[i].Address == preferred) != (out[j].Address == preferred) {
 			return out[i].Address == preferred
@@ -77,13 +75,18 @@ func numberIP(value uint32) net.IP {
 	return out
 }
 func scanRange(adapter Adapter, requested string) (string, []string, error) {
+	requested = strings.TrimSpace(requested)
+	if ip := net.ParseIP(requested); ip != nil && ip.To4() != nil {
+		requested = ip.String() + "/32"
+	}
 	own, network, err := net.ParseCIDR(adapter.CIDR)
 	ip := net.ParseIP(adapter.Address)
-	if err != nil || own.To4() == nil || ip.To4() == nil || !privateIP(ip) || !network.Contains(ip) {
+	manual := adapter == (Adapter{}) && requested != ""
+	if !manual && (err != nil || own.To4() == nil || ip.To4() == nil || !privateIP(ip) || !network.Contains(ip)) {
 		return "", nil, failure("网络接口缺少有效网段，无法扫描", 422, "invalid_params")
 	}
-	prefix, _ := network.Mask.Size()
 	if requested == "" {
+		prefix, _ := network.Mask.Size()
 		requested = network.String()
 		if prefix < 24 {
 			requested = adapter.Address + "/24"
@@ -91,15 +94,21 @@ func scanRange(adapter Adapter, requested string) (string, []string, error) {
 	}
 	rangeIP, subnet, err := net.ParseCIDR(requested)
 	if err != nil || rangeIP.To4() == nil {
-		return "", nil, failure("请填写 IPv4 网段，每次最多扫描 1024 个地址（/22 至 /32）", 422, "invalid_params")
+		return "", nil, failure("请填写内网 IPv4 地址或网段，例如 192.168.1.20 或 192.168.1.0/24", 422, "invalid_params")
 	}
-	bits, _ := subnet.Mask.Size()
+	bits, width := subnet.Mask.Size()
+	if width != 32 {
+		return "", nil, failure("扫描仅支持 IPv4 地址或网段", 422, "invalid_params")
+	}
 	if bits < 22 {
 		return "", nil, failure("每次最多扫描 1024 个地址（/22 至 /32）", 422, "invalid_params")
 	}
 	first := uint64(ipNumber(subnet.IP))
 	last := first + (uint64(1) << uint(32-bits)) - 1
-	if !network.Contains(numberIP(uint32(first))) || !network.Contains(numberIP(uint32(last))) || !privateIP(numberIP(uint32(first))) || !privateIP(numberIP(uint32(last))) {
+	if !privateIP(numberIP(uint32(first))) || !privateIP(numberIP(uint32(last))) {
+		return "", nil, failure("仅支持扫描内网 IPv4 地址或网段", 422, "invalid_params")
+	}
+	if !manual && (!network.Contains(numberIP(uint32(first))) || !network.Contains(numberIP(uint32(last)))) {
 		return "", nil, failure("扫描网段必须位于所选 NAS 网络接口内", 422, "invalid_params")
 	}
 	if bits < 31 {
@@ -118,7 +127,10 @@ func scanRange(adapter Adapter, requested string) (string, []string, error) {
 func probeHTTP(ctx context.Context, host, local string, port int) bool {
 	ctx, cancel := context.WithTimeout(ctx, 700*time.Millisecond)
 	defer cancel()
-	dialer := net.Dialer{LocalAddr: &net.TCPAddr{IP: net.ParseIP(local)}}
+	dialer := net.Dialer{}
+	if ip := net.ParseIP(local); ip != nil {
+		dialer.LocalAddr = &net.TCPAddr{IP: ip}
+	}
 	conn, err := dialer.DialContext(ctx, "tcp4", net.JoinHostPort(host, fmt.Sprint(port)))
 	if err != nil {
 		return false
@@ -240,7 +252,9 @@ func (c *mdnsCache) addresses() []string {
 func browseMDNS(ctx context.Context, adapter Adapter) ([]string, string) {
 	iface, err := net.InterfaceByIndex(adapter.Index)
 	if err != nil {
-		return nil, "unavailable"
+		// A restricted NAS account may be unable to enumerate netlink interfaces.
+		// Let the kernel choose its default multicast interface in that case.
+		iface = nil
 	}
 	group := &net.UDPAddr{IP: net.IPv4(224, 0, 0, 251), Port: 5353}
 	socket, err := net.ListenMulticastUDP("udp4", iface, group)
@@ -319,6 +333,61 @@ type discoveryScan struct {
 	ctx                                          context.Context
 	cancel                                       context.CancelFunc
 }
+
+type discoveryTarget struct {
+	adapter Adapter
+	cidr    string
+	hosts   []string
+}
+
+func discoveryTargets(interfaces []Adapter, selected, requested, mode string) ([]discoveryTarget, error) {
+	requested = strings.TrimSpace(requested)
+	adapters := interfaces
+	if selected != "" {
+		adapters = nil
+		for _, a := range interfaces {
+			if a.ID == selected {
+				adapters = []Adapter{a}
+				break
+			}
+		}
+		if len(adapters) == 0 {
+			return nil, failure("所选网络接口已不可用，请改为自动选择后重试", 422, "invalid_params")
+		}
+	} else if requested != "" && mode != "mdns" {
+		// A manual private subnet can use normal kernel routing even if NAS
+		// interface enumeration failed, or the destination is on another VLAN.
+		adapters = []Adapter{{}}
+		for _, a := range interfaces {
+			if _, _, err := scanRange(a, requested); err == nil {
+				adapters = []Adapter{a}
+				break
+			}
+		}
+	}
+	if len(adapters) == 0 {
+		return nil, failure("未读取到局域网接口，请在高级选项填写扫描网段，或手动添加设备", 422, "invalid_params")
+	}
+	targets := []discoveryTarget{}
+	seen := map[string]bool{}
+	for _, a := range adapters {
+		target := discoveryTarget{adapter: a}
+		if mode != "mdns" {
+			var err error
+			target.cidr, target.hosts, err = scanRange(a, requested)
+			if err != nil {
+				return nil, err
+			}
+			if seen[target.cidr] {
+				continue
+			}
+			seen[target.cidr] = true
+		}
+		targets = append(targets, target)
+	}
+	return targets, nil
+}
+
 type Discovery struct {
 	mu         sync.Mutex
 	manager    *Manager
@@ -380,29 +449,18 @@ func (d *Discovery) start(input Obj) (Obj, error) {
 	if mode != "auto" && mode != "mdns" && mode != "lan" {
 		return nil, bad("发现方式无效")
 	}
-	interfaces := d.interfaces()
-	selected := str(input["interface"])
-	var adapter Adapter
-	for i, a := range interfaces {
-		if selected == a.ID || selected == "" && i == 0 {
-			adapter = a
-			break
-		}
-	}
-	if adapter.ID == "" {
-		return nil, failure("未找到可用于发现的局域网接口，请手动添加设备", 422, "invalid_params")
-	}
-	var cidr string
-	var hosts []string
-	var err error
-	if mode != "mdns" {
-		cidr, hosts, err = scanRange(adapter, str(input["cidr"]))
-		if err != nil {
-			return nil, err
-		}
+	targets, err := discoveryTargets(d.interfaces(), str(input["interface"]), str(input["cidr"]), mode)
+	if err != nil {
+		return nil, err
 	}
 	ctx, cancel := context.WithCancel(d.manager.ctx)
-	s := &discoveryScan{state: "scanning", phase: mode, mdns: "browsing", mode: mode, adapter: adapter.ID, rangeCIDR: cidr, total: len(hosts), devices: map[string]Obj{}, protected: []string{}, ctx: ctx, cancel: cancel}
+	s := &discoveryScan{state: "scanning", phase: mode, mdns: "browsing", mode: mode, devices: map[string]Obj{}, protected: []string{}, ctx: ctx, cancel: cancel}
+	if len(targets) == 1 {
+		s.adapter, s.rangeCIDR = targets[0].adapter.ID, targets[0].cidr
+	}
+	for _, target := range targets {
+		s.total += len(target.hosts)
+	}
 	if mode == "lan" {
 		s.mdns = "skipped"
 	}
@@ -416,17 +474,29 @@ func (d *Discovery) start(input Obj) (Obj, error) {
 			methods.Add(1)
 			go func() {
 				defer methods.Done()
-				addresses, state := d.browse(ctx, adapter)
+				state := "unavailable"
+				for _, target := range targets {
+					if ctx.Err() != nil {
+						break
+					}
+					addresses, result := d.browse(ctx, target.adapter)
+					if result == "complete" {
+						state = "complete"
+						d.verifyCandidates(s, target.adapter, addresses, "mdns")
+					}
+				}
 				d.mu.Lock()
 				s.mdns = state
 				d.mu.Unlock()
-				if state == "complete" {
-					d.verifyCandidates(s, adapter, addresses, "mdns")
-				}
 			}()
 		}
 		if mode != "mdns" {
-			d.verifyCandidates(s, adapter, hosts, "lan")
+			for _, target := range targets {
+				if ctx.Err() != nil {
+					break
+				}
+				d.verifyCandidates(s, target.adapter, target.hosts, "lan")
+			}
 		}
 		methods.Wait()
 		d.mu.Lock()

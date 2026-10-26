@@ -36,13 +36,17 @@ func codeOf(err error) string {
 
 var macPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
 
+func supportedModel(model string) bool {
+	return contains([]string{"TC1", "M1", "A1", "DAIKIN"}, model)
+}
+
 func macOf(v any) string {
 	return strings.ToLower(strings.NewReplacer(":", "", "-", "").Replace(str(v)))
 }
 func identity(model, mac string) (Obj, error) {
 	model = strings.ToUpper(model)
 	mac = macOf(mac)
-	if (model != "TC1" && model != "M1" && model != "A1") || !macPattern.MatchString(mac) {
+	if !supportedModel(model) || !macPattern.MatchString(mac) {
 		return nil, bad("型号或 MAC 地址无效")
 	}
 	return Obj{"id": strings.ToLower(model) + "-" + mac, "model": model, "mac": mac}, nil
@@ -127,7 +131,7 @@ func result(payload, request Obj) (Obj, error) {
 	}
 	code := str(payload["code"])
 	if code != "ok" && code != "accepted" {
-		messages := map[string]string{"unsupported": "当前固件不支持此操作", "busy": "设备忙，请稍后再试", "invalid_params": "设备拒绝了操作参数", "storage_error": "设备保存失败", "conflict": "设备请求冲突"}
+		messages := map[string]string{"unsupported": "当前固件不支持此操作", "unsupported_action": "当前固件不支持此操作", "busy": "设备忙，请稍后再试", "invalid_params": "设备拒绝了操作参数", "storage_error": "设备保存失败", "conflict": "设备请求冲突"}
 		message := messages[code]
 		if message == "" {
 			message = "设备拒绝操作：" + code
@@ -222,7 +226,7 @@ func resolveIdentity(data Obj, query Query) (Obj, error) {
 		model = obj(res["data"])["model"]
 	}
 	m := strings.ToUpper(str(model))
-	if m != "TC1" && m != "M1" && m != "A1" {
+	if !supportedModel(m) {
 		return nil, failure("设备未返回受支持的型号，无法确认设备身份", 502, "protocol_error")
 	}
 	out := clone(data)
@@ -236,7 +240,7 @@ func readIdentity(ctx context.Context, address, password string, timeout time.Du
 	for _, action := range []string{"info.get", "status.get"} {
 		res, err := query(action, nil)
 		if err != nil {
-			if action == "info.get" && codeOf(err) == "unsupported" {
+			if action == "info.get" && (codeOf(err) == "unsupported" || codeOf(err) == "unsupported_action") {
 				continue
 			}
 			return nil, err
@@ -293,6 +297,24 @@ func normalize(model string, s, p Obj) Obj {
 			co2 = finite(obj(s["scd40"])["co2_ppm"])
 		}
 		put(Obj{"sensorValid": boolean(s["sensor_valid"]), "pm25": finite(s["pm25"]), "hcho": finite(s["formaldehyde"]), "temp": finite(s["temperature"]), "humidity": finite(s["humidity"]), "brightness": brightness, "co2": co2})
+	case "DAIKIN":
+		// Each sensor has its own validity and freshness. A warming CO₂ module
+		// must not hide valid PM/temperature readings or turn missing data into 0.
+		sensors := obj(s["sensors"])
+		for field, key := range map[string]string{"pm25": "pm25", "pm10": "pm10", "co2": "co2", "temp": "temperature", "humidity": "humidity", "tvoc": "tvoc", "hcho": "formaldehyde"} {
+			reading := obj(sensors[key])
+			var value any
+			if boolean(reading["valid"]) {
+				value = finite(reading["value"])
+				if age, present := reading["age_ms"]; present && (finite(age) == nil || num(age) < 0 || num(age) > 20000) {
+					value = nil
+				}
+			}
+			out[field] = value
+		}
+		_, hchoPresent := sensors["formaldehyde"]
+		_, pm10Present := sensors["pm10"]
+		put(Obj{"sensorValid": out["pm25"] != nil, "hchoPresent": hchoPresent || boolean(s["formaldehyde_present"]), "pm10Present": pm10Present, "light": boolean(s["indicator_enabled"]), "co2Warmup": finite(s["co2_warmup_seconds_remaining"]), "hardwareModel": str(s["hardware_model"])})
 	case "A1":
 		mode := "manual"
 		if s["fan_mode"] == "auto" {
@@ -338,7 +360,7 @@ func validateControl(model, action string, p Obj) error {
 		ok = allowed("on", "speed", "mode") && (!has("on") || isBool("on")) && (!has("speed") || integer("speed", 0, 100)) && (!has("mode") || p["mode"] == "auto" || p["mode"] == "manual")
 	case model == "A1" && action == "fan.mode.set":
 		ok = allowed("mode") && (p["mode"] == "auto" || p["mode"] == "manual")
-	case (model == "TC1" && action == "indicator.set") || (model == "A1" && action == "light.set") || ((model == "TC1" || model == "A1") && action == "child_lock.set"):
+	case ((model == "TC1" || model == "DAIKIN") && action == "indicator.set") || (model == "A1" && action == "light.set") || ((model == "TC1" || model == "A1") && action == "child_lock.set"):
 		ok = allowed("enabled") && isBool("enabled")
 	}
 	if !ok {

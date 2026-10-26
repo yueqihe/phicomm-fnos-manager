@@ -2,7 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/hmac"
+	"crypto/rand"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -22,7 +26,7 @@ import (
 	"time"
 )
 
-const version = "0.2.5"
+const version = "0.2.9"
 
 //go:embed public/index.html public/app.js public/styles.css
 var frontend embed.FS
@@ -38,6 +42,42 @@ type App struct {
 	discovery *Discovery
 	base      string
 	dev       bool
+	csrfOnce  sync.Once
+	csrfKey   [32]byte
+}
+
+func (a *App) requestToken(r *http.Request) string {
+	a.csrfOnce.Do(func() { rand.Read(a.csrfKey[:]) })
+	mac := hmac.New(sha256.New, a.csrfKey[:])
+	mac.Write([]byte(strings.TrimSpace(r.Header.Get("X-Trim-Userid"))))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func (a *App) validRequestSource(r *http.Request) bool {
+	if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		return false
+	}
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" {
+		return false
+	}
+	local, _ := r.Context().Value(localSocketKey{}).(bool)
+	forwarded := ""
+	if local {
+		forwarded = strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Host"), ",")[0])
+	}
+	if strings.EqualFold(u.Host, r.Host) || (forwarded != "" && strings.EqualFold(u.Host, forwarded)) {
+		return true
+	}
+	// fnOS may replace Host without preserving the original authority, even
+	// during LAN access. A token read by the authenticated page proves the
+	// write came from that page without depending on proxy host headers.
+	token := r.Header.Get("X-Manager-CSRF")
+	return local && a.authenticated(r) && token != "" && hmac.Equal([]byte(token), []byte(a.requestToken(r)))
 }
 
 func (a *App) authenticated(r *http.Request) bool {
@@ -133,25 +173,17 @@ func (a *App) handle(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		}
 		return 0, nil, nil
 	}
-	if r.Method != "GET" && r.Method != "HEAD" {
-		if r.Header.Get("Sec-Fetch-Site") == "cross-site" {
-			return 0, nil, failure("请求来源不正确", 403, "invalid_params")
-		}
-		if origin := r.Header.Get("Origin"); origin != "" {
-			u, err := url.Parse(origin)
-			local, _ := r.Context().Value(localSocketKey{}).(bool)
-			forwarded := ""
-			if local {
-				forwarded = strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-Host"), ",")[0])
-			}
-			if err != nil || u.Host == "" || (u.Host != r.Host && (forwarded == "" || u.Host != forwarded)) {
-				return 0, nil, failure("请求来源不正确", 403, "invalid_params")
-			}
-		}
+	if r.Method != "GET" && r.Method != "HEAD" && !a.validRequestSource(r) {
+		return 0, nil, failure("请求来源不正确", 403, "invalid_origin")
 	}
 	if path == "/api/session" {
 		if r.Method == "GET" {
-			return 200, Obj{"authenticated": a.authenticated(r), "authMode": "fnos"}, nil
+			authenticated := a.authenticated(r)
+			token := ""
+			if authenticated {
+				token = a.requestToken(r)
+			}
+			return 200, Obj{"authenticated": authenticated, "authMode": "fnos", "csrfToken": token}, nil
 		}
 		return 0, nil, failure("请使用飞牛 NAS 管理员账号访问应用", 403, "fnos_auth_required")
 	}
@@ -169,7 +201,8 @@ func (a *App) handle(w http.ResponseWriter, r *http.Request) (int, any, error) {
 	switch path {
 	case "/api/devices":
 		if r.Method == "GET" {
-			return 200, Obj{"devices": a.manager.list(), "service": a.manager.settings()["mqttStatus"]}, nil
+			settings := a.manager.settings()
+			return 200, Obj{"devices": a.manager.list(), "service": settings["mqttStatus"], "refresh": settings["refresh"]}, nil
 		}
 		if r.Method == "POST" {
 			device, err := a.manager.add(r.Context(), input)
@@ -179,6 +212,10 @@ func (a *App) handle(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		if r.Method == "GET" {
 			return 200, a.manager.settings(), nil
 		}
+	case "/api/data-export.csv":
+		if r.Method == "GET" {
+			return a.exportData(w, r)
+		}
 	case "/api/settings/tariff":
 		if r.Method == "PUT" {
 			data, err := a.manager.saveTariff(input)
@@ -187,6 +224,11 @@ func (a *App) handle(w http.ResponseWriter, r *http.Request) (int, any, error) {
 	case "/api/settings/mqtt":
 		if r.Method == "PUT" {
 			data, err := a.manager.saveMQTT(input)
+			return 200, data, err
+		}
+	case "/api/settings/refresh":
+		if r.Method == "PUT" {
+			data, err := a.manager.saveRefresh(input)
 			return 200, data, err
 		}
 	case "/api/settings/password":
@@ -228,6 +270,10 @@ func (a *App) handle(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		}
 		if len(parts) > 2 {
 			return 0, nil, failure("接口不存在", 404, "not_found")
+		}
+		if operation == "data-history" && r.Method == "GET" {
+			data, err := a.manager.dataHistory(r.Context(), id, r.URL.Query().Get("range"))
+			return 200, data, err
 		}
 		if operation == "" {
 			if r.Method == "PUT" {

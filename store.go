@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -19,8 +20,10 @@ import (
 
 type Obj = map[string]any
 type Store struct {
-	db  *sql.DB
-	key []byte
+	db        *sql.DB
+	key       []byte
+	dataMu    sync.Mutex
+	lastPrune int64
 }
 
 func token() string {
@@ -67,13 +70,17 @@ func openStore(dir string) (*Store, error) {
 	_, err = db.Exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;
  CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS devices(id TEXT PRIMARY KEY,model TEXT NOT NULL,mac TEXT NOT NULL,value TEXT NOT NULL,UNIQUE(model,mac));
- CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY AUTOINCREMENT,time TEXT NOT NULL,device_id TEXT,name TEXT NOT NULL,action TEXT NOT NULL,outcome TEXT NOT NULL,message TEXT NOT NULL);`)
+ CREATE TABLE IF NOT EXISTS history(id INTEGER PRIMARY KEY AUTOINCREMENT,time TEXT NOT NULL,device_id TEXT,name TEXT NOT NULL,action TEXT NOT NULL,outcome TEXT NOT NULL,message TEXT NOT NULL);
+ CREATE TABLE IF NOT EXISTS telemetry(device_id TEXT NOT NULL,minute INTEGER NOT NULL,at INTEGER NOT NULL,value TEXT NOT NULL,PRIMARY KEY(device_id,minute)) WITHOUT ROWID;
+ CREATE INDEX IF NOT EXISTS telemetry_at ON telemetry(at);`)
 	if err != nil {
 		db.Close()
 		return nil, err
 	}
 	_ = os.Chmod(filepath.Join(dir, "manager.sqlite"), 0600)
-	return &Store{db, key}, nil
+	s := &Store{db: db, key: key}
+	s.pruneSamples(time.Now().UnixMilli())
+	return s, nil
 }
 func (s *Store) get(key string, fallback any) any {
 	var raw string

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -166,5 +167,98 @@ func TestDiscoveryFiltersContainerInterfaces(t *testing.T) {
 	}
 	if usableInterface(net.Interface{Name: "eth0"}) || usableInterface(net.Interface{Name: "lo", Flags: net.FlagUp | net.FlagLoopback}) {
 		t.Fatal("inactive or loopback interface accepted")
+	}
+}
+
+func TestRouteInterfaceFallback(t *testing.T) {
+	table := `Iface Destination Gateway Flags RefCnt Use Metric Mask
+br0 00000000 0100000A 0003 0 0 100 00000000
+br0 0000000A 00000000 0001 0 0 100 00FFFFFF
+bond0 0002A8C0 00000000 0001 0 0 100 00FFFFFF
+docker0 000011AC 00000000 0001 0 0 100 0000FFFF
+eth9 00080808 00000000 0001 0 0 100 00FFFFFF
+eth8 0003A8C0 00000000 0000 0 0 100 00FFFFFF
+eth7 invalid 00000000 0001 0 0 100 invalid
+../bad 0004A8C0 00000000 0001 0 0 100 00FFFFFF
+`
+	adapters := routeInterfaces(table, func(target net.IP) net.IP {
+		if target.String() == "10.0.0.1" {
+			return net.ParseIP("10.0.0.9")
+		}
+		return net.ParseIP("192.168.2.9")
+	}, func(string) int { return 7 })
+	if len(adapters) != 2 || adapters[0].CIDR != "10.0.0.9/24" || adapters[1].CIDR != "192.168.2.9/24" || adapters[0].Index != 7 || !strings.HasPrefix(adapters[0].Label, "br0") {
+		t.Fatal(adapters)
+	}
+	if adapters := routeInterfaces(table, func(net.IP) net.IP { return nil }, func(string) int { return 0 }); len(adapters) != 0 {
+		t.Fatal("unroutable interface accepted", adapters)
+	}
+}
+
+func TestDiscoveryTargetsAcrossAdaptersAndManualRouting(t *testing.T) {
+	adapters := []Adapter{
+		{ID: "first", Address: "10.0.0.9", CIDR: "10.0.0.9/24"},
+		{ID: "second", Address: "192.168.2.9", CIDR: "192.168.2.9/24"},
+		{ID: "alias", Address: "10.0.0.10", CIDR: "10.0.0.10/24"},
+	}
+	targets, err := discoveryTargets(adapters, "", "", "auto")
+	if err != nil || len(targets) != 2 || targets[0].cidr != "10.0.0.0/24" || targets[1].cidr != "192.168.2.0/24" {
+		t.Fatal(targets, err)
+	}
+	targets, err = discoveryTargets(adapters, "", "192.168.2.20", "auto")
+	if err != nil || len(targets) != 1 || targets[0].adapter.ID != "second" || len(targets[0].hosts) != 1 {
+		t.Fatal(targets, err)
+	}
+	for _, interfaces := range [][]Adapter{nil, adapters} {
+		targets, err = discoveryTargets(interfaces, "", " 172.20.3.0/24 ", "auto")
+		if err != nil || len(targets) != 1 || targets[0].adapter.Address != "" || len(targets[0].hosts) != 254 || targets[0].cidr != "172.20.3.0/24" {
+			t.Fatal(targets, err)
+		}
+	}
+	for _, invalid := range []string{"8.8.8.8", "10.0.0.0/21", "bad", "::1/128", "::ffff:192.168.1.1/120", "192.168.1.1/33"} {
+		if _, err := discoveryTargets(nil, "", invalid, "auto"); err == nil {
+			t.Fatal("accepted invalid manual subnet", invalid)
+		}
+	}
+	if _, err := discoveryTargets(adapters, "first", "192.168.2.0/24", "auto"); err == nil {
+		t.Fatal("explicit interface accepted a different subnet")
+	}
+	if _, err := discoveryTargets(adapters, "removed", "10.0.0.0/24", "auto"); err == nil {
+		t.Fatal("stale interface accepted")
+	}
+	if _, err := discoveryTargets(nil, "", "", "auto"); err == nil {
+		t.Fatal("missing interfaces and subnet accepted")
+	}
+}
+
+func TestDiscoveryWhenInterfacesAreMissingOrDeviceIsOnSecondAdapter(t *testing.T) {
+	_, a, _ := testManager(t)
+	f := firmwareFixture(t, "TC1", "aabbcc000092")
+	u, _ := url.Parse(f.server.URL)
+	port := 0
+	fmt.Sscanf(u.Port(), "%d", &port)
+	d := a.discovery
+	d.port = port
+	d.browse = func(context.Context, Adapter) ([]string, string) { return nil, "unavailable" }
+	d.interfaces = func() []Adapter { return nil }
+	if _, err := d.start(Obj{"cidr": u.Hostname()}); err != nil {
+		t.Fatal(err)
+	}
+	waitUntil(t, func() bool { return d.snapshot()["state"] == "complete" })
+	if snapshot := d.snapshot(); snapshot["checked"] != 1 || len(snapshot["devices"].([]Obj)) != 1 || snapshot["mdns"] != "unavailable" {
+		t.Fatal("manual discovery depended on interface enumeration or mDNS", snapshot)
+	}
+	d.interfaces = func() []Adapter {
+		return []Adapter{
+			{ID: "first", Address: "127.0.0.3", CIDR: "127.0.0.3/32"},
+			{ID: "second", Address: "127.0.0.2", CIDR: "127.0.0.2/30"},
+		}
+	}
+	if _, err := d.start(Obj{}); err != nil {
+		t.Fatal(err)
+	}
+	waitUntil(t, func() bool { return d.snapshot()["state"] == "complete" })
+	if snapshot := d.snapshot(); snapshot["total"] != 1 || snapshot["checked"] != 1 || len(snapshot["devices"].([]Obj)) != 1 {
+		t.Fatal("device on second adapter was missed", snapshot)
 	}
 }

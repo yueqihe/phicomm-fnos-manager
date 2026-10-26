@@ -1,7 +1,7 @@
 appname=phicomm-manager
-version=0.2.5
+version=0.2.9
 display_name=斐讯设备管理
-desc=原生管理 TC1 智能排插、M1 空气检测仪和 A1 空气净化器，支持局域网与 MQTT 接入、空间管理和手机访问。
+desc=原生管理 TC1 智能排插、M1 空气检测仪、A1 空气净化器和 DAIKIN 大金检测仪，支持局域网与 MQTT 接入、空间管理和手机访问。
 source=thirdparty
 platform=arm
 maintainer=情深深雨蒙蒙
@@ -14,4 +14,4 @@ desktop_applaunchname=phicomm-manager.main
 ctl_stop=true
 checkport=false
 disable_authorization_path=true
-changelog=空间视图显示累计用电和预估消费，新增电价设置入口；插口名称支持编辑并与设备网页双向同步。
+changelog=TC1 空间卡片显示六路插口独立状态及名称，支持手机自适应布局；离线时明确显示离线状态。

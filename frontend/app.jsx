@@ -1,20 +1,20 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {api, json, Icon, Dot, Message, Modal} from './ui.jsx';
+import {api, json, Icon, Message, Modal} from './ui.jsx';
 import {DeviceWorkspace, Detail} from './devices.jsx';
 import {AddDialog, SettingsDialog, HistoryDialog} from './dialogs.jsx';
 import {useTheme} from './theme.js';
 
 function App() {
   const [theme,setTheme]=useTheme();
-  const [session,setSession]=useState('loading'), [devices,setDevices]=useState([]), [settings,setSettings]=useState(null), [selected,setSelected]=useState(''), [layout,setLayoutState]=useState(() => localStorage.getItem('pm-view') === 'rooms' ? 'rooms' : 'list'), [filter,setFilter]=useState('all'), [loading,setLoading]=useState(true), [connected,setConnected]=useState(true), [serviceError,setServiceError]=useState(''), [modal,setModal]=useState(null), [message,setMessage]=useState(null), [busy,setBusy]=useState(new Set());
+  const [session,setSession]=useState('loading'), [devices,setDevices]=useState([]), [settings,setSettings]=useState(null), [selected,setSelected]=useState(''), [layout,setLayout]=useState('rooms'), [filter,setFilter]=useState('all'), [loading,setLoading]=useState(true), [connected,setConnected]=useState(true), [serviceError,setServiceError]=useState(''), [modal,setModal]=useState(null), [message,setMessage]=useState(null), [busy,setBusy]=useState(new Set());
   const alive=useRef(true), busyRef=useRef(new Set()), toastTimer=useRef(), fetching=useRef(false);
   const notify=useCallback((text,error=false) => {clearTimeout(toastTimer.current);setMessage({text,error});toastTimer.current=setTimeout(() => setMessage(null),6000);},[]);
   const sync=useCallback(async (configuration=false) => {
     try {
       const [data,config]=await Promise.all([api('devices'),configuration ? api('settings') : Promise.resolve(null)]);
       if(!alive.current) return;
-      setDevices(data.devices);setSettings(old => ({...(config || old),mqttStatus:data.service}));setLoading(false);setConnected(true);setServiceError('');
+      setDevices(data.devices);setSettings(old => ({...(config || old),...(data.refresh ? {refresh:data.refresh} : {}),mqttStatus:data.service}));setLoading(false);setConnected(true);setServiceError('');
       return data;
     } catch(e) {
       if(alive.current) {setConnected(false);setServiceError(e.message);if(e.status === 401) {setSession('denied');setModal(null);}}
@@ -33,30 +33,33 @@ function App() {
   useEffect(() => {
     if(session !== 'ready') return;
     const synchronize=async () => {if(fetching.current || document.hidden) return;fetching.current=true;try {await sync();} catch {} finally {fetching.current=false;}};
-    const interval=setInterval(synchronize,5000);
+    const interval=setInterval(synchronize,(settings?.refresh?.pageSeconds || 5)*1000);
     document.addEventListener('visibilitychange',synchronize);
     window.addEventListener('online',synchronize);
     return () => {clearInterval(interval);document.removeEventListener('visibilitychange',synchronize);window.removeEventListener('online',synchronize);};
-  },[session,sync]);
+  },[session,sync,settings?.refresh?.pageSeconds]);
   const close=() => {setModal(null);setMessage(null);};
   const open=(type,options={}) => {setMessage(null);setModal({type,...options});};
   const openSettings=async (id=selected,tab='devices') => {try {const config=await api('settings');setSettings(config);open('settings',{id,tab});} catch(e) {notify(e.message,true);}};
-  const setLayout=value => {localStorage.setItem('pm-view',value);setLayoutState(value);};
   const changeBusy=(id,value) => {if(value) busyRef.current.add(id);else busyRef.current.delete(id);setBusy(new Set(busyRef.current));};
   const replace=device => setDevices(old => old.map(d => d.id === device.id ? device : d));
+  const saveChartMetric=async (id,chartMetric) => {
+    const data=await api(`devices/${id}`,json('PUT',{chartMetric}));
+    replace(data.device);
+  };
   const control=async (d,action,params) => {
     if(busyRef.current.has(d.id)) return;changeBusy(d.id,true);
     try {const data=await api(`devices/${d.id}/control`,json('POST',{action,params}));replace(data.device);notify(data.message);return data;}
     catch(e) {notify(e.message,true);}
     finally {changeBusy(d.id,false);await sync().catch(() => {});}
   };
-  const controls={control,busy,settings:openSettings,can:(d,action) => d.online && connected && !busy.has(d.id) && d.actions.includes(action)};
+  const controls={control,busy,settings:openSettings,history:(id,metric) => open('history',{id,metric}),can:(d,action) => d.online && connected && !busy.has(d.id) && d.actions.includes(action)};
   if(session !== 'ready') return <div className="pm-app pm-login"><div className="pm-panel pm-login-card"><span className="pm-brandmark"><Icon name="layers"/></span><h1>斐讯设备管理</h1>{session === 'loading' ? <p className="pm-help" role="status">正在连接管理服务…</p> : <><p className="pm-help" role="alert">{session === 'denied' ? '请使用飞牛 NAS 管理员账号登录，并从桌面重新打开应用。' : serviceError}</p><button className="pm-btn pm-btn-primary" onClick={() => location.reload()}>重新检查连接</button></>}</div></div>;
   const values=[devices.length,devices.filter(d => d.online).length,devices.filter(d => !d.online).length], active=devices.find(d => d.id === modal?.id);
-  return <div className="pm-app" data-layout={layout}><header className="pm-top"><h1 className="pm-sr-only">斐讯设备管理</h1><div className="pm-header-summary" role="group" aria-label="设备概况"><div className="pm-stats">{['全部设备','当前在线','暂时离线'].map((name,i) => <div className="pm-stat" key={name}><span className="pm-stat-label">{name}</span><span className="pm-stat-value">{loading ? '—' : String(values[i]).padStart(2,'0')}<small>台</small></span></div>)}</div></div><div className="pm-header-services" role="group" aria-label="连接状态"><button className="pm-connection-status" onClick={() => openSettings()}><Dot online={devices.some(d => d.lan)}/>局域网 <span className="pm-connection-count">{devices.filter(d => d.lan).length} 台</span></button><button className="pm-connection-status" title={settings.mqttStatus.message || '未启用'} onClick={() => openSettings(selected,'service')}><Dot online={settings.mqttStatus.state === 'connected'}/>MQTT <span className="pm-connection-count">{devices.filter(d => d.mqtt).length} 台</span></button></div><nav className="pm-top-actions" aria-label="设置与记录"><button className="pm-nav pm-utility" aria-label="设置" title="设置" aria-haspopup="dialog" onClick={() => openSettings()}><Icon name="settings"/></button><button className="pm-nav pm-utility" aria-label="历史记录" title="历史记录" aria-haspopup="dialog" onClick={() => open('history')}><Icon name="history"/></button></nav></header><div className="pm-service-error" role="status" hidden={!serviceError}>{serviceError}</div><main className="pm-content"><DeviceWorkspace {...{devices,selected,layout,filter,setFilter,setLayout,loading}} select={setSelected} add={() => open('add')} openControl={id => {setSelected(id);open('control',{id});}} {...controls}/></main><Message message={modal ? null : message}/>
+  return <div className="pm-app" data-layout={layout}><header className="pm-top"><h1 className="pm-sr-only">斐讯设备管理</h1><div className="pm-header-summary" role="group" aria-label="设备概况"><div className="pm-stats">{['全部设备','当前在线','暂时离线'].map((name,i) => <div className="pm-stat" key={name}><span className="pm-stat-label">{name}</span><span className="pm-stat-value">{loading ? '—' : String(values[i]).padStart(2,'0')}<small>台</small></span></div>)}</div></div><nav className="pm-top-actions" aria-label="设置与记录"><button className="pm-nav pm-utility" aria-label="设置" title="设置" aria-haspopup="dialog" onClick={() => openSettings()}><Icon name="settings"/></button><button className="pm-nav pm-utility" aria-label="历史记录" title="历史记录" aria-haspopup="dialog" onClick={() => open('history')}><Icon name="history"/></button></nav></header><div className="pm-service-error" role="status" hidden={!serviceError}>{serviceError}</div><main className="pm-content"><DeviceWorkspace {...{devices,selected,layout,filter,setFilter,setLayout,loading}} select={setSelected} add={() => open('add')} openControl={id => {setSelected(id);open('control',{id});}} {...controls}/></main><Message message={modal ? null : message}/>
     {modal?.type === 'add' && <AddDialog {...{devices,message}} onClose={close} added={async device => {setSelected(device.id);await sync();close();notify(device.online ? '设备已接入' : '已登记，等待设备上线');}}/>}
     {modal?.type === 'settings' && <SettingsDialog {...{devices,settings,sync,message,notify,busy,theme,setTheme}} initialId={modal.id} initialTab={modal.tab} onClose={close}/>}
-    {modal?.type === 'history' && <HistoryDialog message={message} onClose={close}/>}
+    {modal?.type === 'history' && <HistoryDialog saveChartMetric={saveChartMetric} devices={devices} initialId={modal.id || selected} initialMetric={modal.metric} message={message} onClose={close}/>}
     {modal?.type === 'control' && <Modal name="control" title="设备控制" message={message} onClose={close}><div className="pm-dialog-body pm-control-body">{active ? <Detail device={active} {...controls}/> : <div className="pm-empty">设备已移除</div>}</div></Modal>}
   </div>;
 }

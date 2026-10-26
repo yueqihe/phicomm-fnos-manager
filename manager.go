@@ -37,6 +37,8 @@ type Manager struct {
 	cancel             context.CancelFunc
 	wg                 sync.WaitGroup
 	timeout, interval  time.Duration
+	pageSeconds        float64
+	pollChanged        chan struct{}
 	closed             bool
 }
 
@@ -45,7 +47,13 @@ func defaultMQTT() Obj {
 }
 func newManager(s *Store, timeout, interval time.Duration) (*Manager, error) {
 	ctx, cancel := context.WithCancel(context.Background())
-	m := &Manager{store: s, devices: map[string]*deviceEntry{}, ignored: map[string]bool{}, ctx: ctx, cancel: cancel, timeout: timeout, interval: interval}
+	m := &Manager{store: s, devices: map[string]*deviceEntry{}, ignored: map[string]bool{}, ctx: ctx, cancel: cancel, timeout: timeout, interval: interval, pageSeconds: 5, pollChanged: make(chan struct{}, 1)}
+	if saved, ok := s.get("refresh", nil).(map[string]any); ok {
+		if config, err := validateRefresh(saved, m.refreshSettings()); err == nil {
+			m.interval = time.Duration(num(config["pollSeconds"])) * time.Second
+			m.pageSeconds = num(config["pageSeconds"])
+		}
+	}
 	for _, d := range s.devices() {
 		id := str(d["id"])
 		m.devices[id] = &deviceEntry{d: d, r: runtimeState{failures: 3, actions: []string{}}}
@@ -67,7 +75,7 @@ func (m *Manager) start() {
 	go func() {
 		defer m.wg.Done()
 		m.pollAll()
-		timer := time.NewTicker(m.interval)
+		timer := time.NewTicker(m.pollInterval())
 		defer timer.Stop()
 		for {
 			select {
@@ -75,6 +83,8 @@ func (m *Manager) start() {
 				return
 			case <-timer.C:
 				m.pollAll()
+			case <-m.pollChanged:
+				timer.Reset(m.pollInterval())
 			}
 		}
 	}()
@@ -137,7 +147,7 @@ func (m *Manager) public(e *deviceEntry) Obj {
 	if d["model"] == "TC1" {
 		bill = billingSummary(obj(d["billing"]), m.tariff, float64(time.Now().UnixMilli()))
 	}
-	return clone(Obj{"id": d["id"], "model": d["model"], "mac": d["mac"], "name": d["name"], "room": d["room"], "method": d["method"], "address": str(d["address"]), "passwordSet": str(d["password"]) != "", "online": lan || mqtt, "lan": lan, "mqtt": mqtt, "lastSeen": d["lastSeen"], "state": d["state"], "billing": bill, "actions": e.r.actions, "error": err, "busy": e.r.busy})
+	return clone(Obj{"id": d["id"], "model": d["model"], "mac": d["mac"], "name": d["name"], "room": d["room"], "method": d["method"], "address": str(d["address"]), "passwordSet": str(d["password"]) != "", "online": lan || mqtt, "lan": lan, "mqtt": mqtt, "lastSeen": d["lastSeen"], "state": d["state"], "billing": bill, "actions": e.r.actions, "error": err, "busy": e.r.busy, "chartMetric": chartMetric(d), "chartMetrics": dataMetrics(str(d["model"]))})
 }
 func (m *Manager) list() []Obj {
 	m.mu.RLock()
@@ -156,7 +166,7 @@ func (m *Manager) settings() Obj {
 	c := clone(m.mqttConfig)
 	c["passwordSet"] = str(c["password"]) != ""
 	delete(c, "password")
-	return Obj{"mqtt": c, "mqttStatus": m.mqtt.status(), "tariff": clone(m.tariff), "pollSeconds": m.interval.Seconds()}
+	return Obj{"mqtt": c, "mqttStatus": m.mqtt.status(), "tariff": clone(m.tariff), "pollSeconds": m.interval.Seconds(), "refresh": m.refreshSettings()}
 }
 func (m *Manager) saveTariff(input Obj) (Obj, error) {
 	m.mu.Lock()
@@ -173,6 +183,7 @@ func (m *Manager) saveTariff(input Obj) (Obj, error) {
 	return m.settings(), nil
 }
 func (m *Manager) pollAll() {
+	m.store.maintainSamples(time.Now().UnixMilli())
 	m.mu.RLock()
 	entries := []*deviceEntry{}
 	for _, id := range m.order {
@@ -287,6 +298,7 @@ func (m *Manager) readRoute(ctx context.Context, e *deviceEntry, route string) e
 	}
 	e.r.err = ""
 	m.store.save(e.d)
+	m.store.recordSample(e.d, now.UnixMilli())
 	return nil
 }
 func (m *Manager) read(ctx context.Context, e *deviceEntry) Obj {
@@ -348,7 +360,7 @@ func (m *Manager) refresh(ctx context.Context, id string) (Obj, error) {
 }
 func (m *Manager) add(ctx context.Context, input Obj) (Obj, error) {
 	model := strings.ToUpper(str(input["model"]))
-	if !contains([]string{"TC1", "M1", "A1"}, model) {
+	if !supportedModel(model) {
 		return nil, bad("请选择设备型号")
 	}
 	method := str(valueOr(input["method"], "lan"))
@@ -476,6 +488,22 @@ func (m *Manager) update(id string, input Obj) (Obj, error) {
 			}
 			next[field] = value
 		}
+	}
+	if raw, present := input["chartMetric"]; present {
+		value, valid := raw.(string)
+		supported := false
+		if valid {
+			for _, metric := range dataMetrics(str(next["model"])) {
+				if metric.ID == value {
+					supported = true
+					break
+				}
+			}
+		}
+		if !supported {
+			return nil, bad("此设备不支持所选曲线指标")
+		}
+		next["chartMetric"] = value
 	}
 	if method, present := input["method"]; present {
 		if !contains([]string{"lan", "mqtt", "hybrid"}, str(method)) {
@@ -867,5 +895,8 @@ func (m *Manager) onPacket(tail string, payload []byte, retained bool) {
 		e.d["lastSeen"] = time.Now().UTC().Format(time.RFC3339Nano)
 		e.r.mqttLast = time.Now()
 		m.store.save(e.d)
+		if e.d["model"] != "TC1" {
+			m.store.recordSample(e.d, time.Now().UnixMilli())
+		}
 	}
 }
