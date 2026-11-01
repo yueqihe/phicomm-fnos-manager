@@ -32,6 +32,7 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
   assert.equal(seeded.status,0);
   await fetch(url+'api/devices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'TC1',method:'mqtt',mac:'aabbcc000304',name:'待接入排插'})});
   const context=await browser.newContext({viewport:{width:1440,height:1000},colorScheme:'light',acceptDownloads:true}),page=await context.newPage(),errors=[];
+  await context.route('**/api/discovery/automatic?*',route=>route.fulfill({json:{state:'complete',devices:[]}}));
   page.on('pageerror',e=>errors.push(e.message));await page.goto(url);
   const tile=page.locator('.pm-tile').filter({has:page.locator('[data-open-control="tc1-aabbcc000301"]')});
   await tile.locator('[data-power-sparkline]').waitFor();

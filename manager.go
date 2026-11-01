@@ -39,6 +39,7 @@ type Manager struct {
 	timeout, interval  time.Duration
 	pageSeconds        float64
 	pollChanged        chan struct{}
+	recoverLAN         func()
 	closed             bool
 }
 
@@ -210,6 +211,9 @@ func (m *Manager) pollAll() {
 		}(e)
 	}
 	wg.Wait()
+	if m.recoverLAN != nil && m.ctx.Err() == nil {
+		m.recoverLAN()
+	}
 }
 func (m *Manager) query(ctx context.Context, d Obj, route, action string, params Obj) (Obj, error) {
 	request := envelope(action, params)
@@ -240,26 +244,41 @@ func (m *Manager) readRoute(ctx context.Context, e *deviceEntry, route string) e
 	m.mu.RLock()
 	d := clone(e.d)
 	m.mu.RUnlock()
+	state, actions, err := m.readDevice(ctx, d, route)
+	if err != nil {
+		return err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.devices[str(d["id"])] != e {
+		return failure("设备已移除", 404, "not_found")
+	}
+	m.applyReading(e, state, actions, route)
+	return nil
+}
+
+// Fetch and verify before mutating the entry, including when trying a new IP.
+func (m *Manager) readDevice(ctx context.Context, d Obj, route string) (Obj, []string, error) {
 	if route == "lan" {
 		if err := m.checkLAN(ctx, d); err != nil {
-			return err
+			return nil, nil, err
 		}
 	}
 	query := func(action string, p Obj) (Obj, error) { return m.query(ctx, d, route, action, p) }
 	res, err := query("status.get", nil)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	info, err := resolveIdentity(obj(res["data"]), query)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	if err = verifyIdentity(info, d); err != nil {
-		return err
+		return nil, nil, err
 	}
 	caps, err := query("capabilities.get", nil)
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	actions := stringsOf(obj(caps["data"])["actions"])
 	power := Obj{}
@@ -268,16 +287,15 @@ func (m *Manager) readRoute(ctx context.Context, e *deviceEntry, route string) e
 			power = obj(reading["data"])
 		}
 	}
+	return normalize(str(d["model"]), info, power), actions, nil
+}
+
+// Caller holds m.mu and the entry operation lock.
+func (m *Manager) applyReading(e *deviceEntry, state Obj, actions []string, route string) {
 	now := time.Now()
-	state := normalize(str(d["model"]), info, power)
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.devices[str(d["id"])] != e {
-		return failure("设备已移除", 404, "not_found")
-	}
 	e.d["state"] = state
 	e.d["lastSeen"] = now.UTC().Format(time.RFC3339Nano)
-	if d["model"] == "TC1" {
+	if e.d["model"] == "TC1" {
 		var prev Obj
 		if e.d["billing"] != nil {
 			prev = obj(e.d["billing"])
@@ -299,7 +317,6 @@ func (m *Manager) readRoute(ctx context.Context, e *deviceEntry, route string) e
 	e.r.err = ""
 	m.store.save(e.d)
 	m.store.recordSample(e.d, now.UnixMilli())
-	return nil
 }
 func (m *Manager) read(ctx context.Context, e *deviceEntry) Obj {
 	m.mu.RLock()
@@ -409,13 +426,18 @@ func (m *Manager) add(ctx context.Context, input Obj) (Obj, error) {
 		m.mu.Unlock()
 		return nil, failure("设备配置正在更新，请稍后重试", 409, "busy")
 	}
+	if existing && m.devices[id] != e {
+		m.mu.Unlock()
+		return nil, failure("设备已移除，请重新添加", 409, "not_found")
+	}
 	old := e.d
-	name, err := cleanText(valueOr(input["name"], valueOr(old["name"], model+"-"+mac[8:])), 48, "设备名称")
+	// Adding a known identity reconnects it; editing metadata belongs in settings.
+	name, err := cleanText(valueOr(old["name"], valueOr(input["name"], model+"-"+mac[8:])), 48, "设备名称")
 	if err != nil {
 		m.mu.Unlock()
 		return nil, err
 	}
-	room, err := cleanText(valueOr(input["room"], valueOr(old["room"], "未分组")), 32, "空间")
+	room, err := cleanText(valueOr(old["room"], valueOr(input["room"], "未分组")), 32, "空间")
 	if err != nil {
 		m.mu.Unlock()
 		return nil, err
@@ -427,7 +449,7 @@ func (m *Manager) add(ctx context.Context, input Obj) (Obj, error) {
 	d["name"] = name
 	d["room"] = room
 	d["method"] = method
-	if method == "lan" && old["method"] == "mqtt" {
+	if existing && old["method"] != method {
 		d["method"] = "hybrid"
 	}
 	if address == "" {

@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const version = "0.2.9"
+const version = "0.2.10"
 
 //go:embed public/index.html public/app.js public/styles.css
 var frontend embed.FS
@@ -249,6 +249,12 @@ func (a *App) handle(w http.ResponseWriter, r *http.Request) (int, any, error) {
 				next = records[len(records)-1]["id"]
 			}
 			return 200, Obj{"records": records, "next": next}, nil
+		}
+	case "/api/discovery/automatic":
+		action := map[string]string{"POST": "start", "GET": "poll", "DELETE": "leave"}[r.Method]
+		if action != "" {
+			data, err := a.discovery.automatic(r.URL.Query().Get("client"), action)
+			return 200, data, err
 		}
 	case "/api/discovery":
 		switch r.Method {
@@ -492,6 +498,7 @@ func run() error {
 	}
 	app := &App{manager: m, base: *base, dev: *dev}
 	app.discovery = newDiscovery(m)
+	m.recoverLAN = app.discovery.recover
 	defer func() { app.discovery.close(); m.close() }()
 	server := &http.Server{Handler: app, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 40 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16384, ConnContext: gatewayConnectionContext}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

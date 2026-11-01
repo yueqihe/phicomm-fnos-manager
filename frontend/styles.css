@@ -413,6 +413,21 @@ html,body{margin:0;min-height:100%;background:var(--pm-bg)}
 #manager .pm-discovered>span:last-child{flex-shrink:0;color:var(--pm-accent)}
 #manager .pm-discovered:hover{background:var(--pm-hover)}
 #manager .pm-discovered:disabled{opacity:.5;cursor:default}
+#manager .pm-new-devices{padding:16px;margin-bottom:22px;border:1px solid var(--pm-line);border-radius:var(--pm-radius);background:var(--pm-paper)}
+#manager .pm-new-devices>p{font-weight:550;font-size:14px}
+#manager .pm-new-devices ul{list-style:none;padding:0;margin:8px 0 0;max-height:300px;overflow:auto}
+#manager .pm-new-devices li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--pm-line)}
+#manager .pm-new-devices li:first-child{border-top:0}
+#manager .pm-new-device-info{display:flex;align-items:center;gap:12px;min-width:0}
+#manager .pm-new-device-info>div{min-width:0}
+#manager .pm-new-device-info strong{font-size:14px;font-weight:500}
+#manager .pm-new-device-info span{display:block;color:var(--pm-muted);font-size:12px;overflow-wrap:anywhere;margin-top:3px}
+#manager .pm-new-device-actions{display:flex;gap:8px;flex-shrink:0}
+@media(max-width:520px){
+  #manager .pm-new-devices li{flex-wrap:wrap;gap:8px}
+  #manager .pm-new-device-actions{width:100%;justify-content:flex-end}
+  #manager .pm-new-device-actions .pm-btn{min-height:44px}
+}
 #manager h1,#manager h2,#manager h3,#manager p{margin:0}
 #manager .pm-app{min-height:100dvh;border:0;border-radius:0;overflow:visible}
 #manager .pm-content{max-width:1440px;margin:auto}

@@ -332,6 +332,9 @@ type discoveryScan struct {
 	protected                                    []string
 	ctx                                          context.Context
 	cancel                                       context.CancelFunc
+	background                                   bool
+	viewers                                      map[string]time.Time
+	recovery                                     map[string]lanRecoveryTarget
 }
 
 type discoveryTarget struct {
@@ -389,14 +392,17 @@ func discoveryTargets(interfaces []Adapter, selected, requested, mode string) ([
 }
 
 type Discovery struct {
-	mu         sync.Mutex
-	manager    *Manager
-	interfaces func() []Adapter
-	browse     func(context.Context, Adapter) ([]string, string)
-	probe      func(context.Context, string, string, int) bool
-	port       int
-	scan       *discoveryScan
-	wg         sync.WaitGroup
+	mu            sync.Mutex
+	manager       *Manager
+	interfaces    func() []Adapter
+	browse        func(context.Context, Adapter) ([]string, string)
+	probe         func(context.Context, string, string, int) bool
+	port          int
+	scan          *discoveryScan
+	wg            sync.WaitGroup
+	nextRecovery  time.Time
+	nextAutomatic time.Time
+	closed        bool
 }
 
 func newDiscovery(m *Manager) *Discovery {
@@ -426,11 +432,15 @@ func (d *Discovery) snapshotLocked() Obj {
 	out["range"] = s.rangeCIDR
 	out["checked"] = s.checked
 	out["total"] = s.total
+	out["background"] = s.background || s.viewers != nil
 	devices := []Obj{}
 	d.manager.mu.RLock()
 	for id, device := range s.devices {
 		device = clone(device)
-		device["added"] = d.manager.devices[id] != nil
+		e := d.manager.devices[id]
+		device["added"] = e != nil
+		device["ignored"] = d.manager.ignored[id]
+		device["canUpdate"] = e != nil && e.d["method"] != "mqtt" && e.d["address"] != device["address"] && e.r.failures > 0
 		devices = append(devices, device)
 	}
 	d.manager.mu.RUnlock()
@@ -442,19 +452,46 @@ func (d *Discovery) snapshotLocked() Obj {
 func (d *Discovery) start(input Obj) (Obj, error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
+	if err := d.beginLocked(input, false); err != nil {
+		return nil, err
+	}
+	return d.snapshotLocked(), nil
+}
+
+// Called after collection; at most one scan runs, and repeated failures do
+// not turn every page refresh into a subnet scan. Interfaces are read anew.
+func (d *Discovery) recover() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.closed || d.manager.ctx.Err() != nil || time.Now().Before(d.nextRecovery) || d.scan != nil && d.scan.state == "scanning" {
+		return
+	}
+	if len(d.manager.lostLAN(3)) == 0 {
+		return
+	}
+	d.nextRecovery = time.Now().Add(2 * time.Minute)
+	_ = d.beginLocked(Obj{}, true)
+}
+
+func (d *Discovery) beginLocked(input Obj, background bool) error {
+	if d.closed || d.manager.ctx.Err() != nil {
+		return failure("设备发现服务已停止", 503, "unavailable")
+	}
 	if d.scan != nil && d.scan.state == "scanning" {
-		return d.snapshotLocked(), nil
+		return nil
 	}
 	mode := str(valueOr(input["mode"], "auto"))
 	if mode != "auto" && mode != "mdns" && mode != "lan" {
-		return nil, bad("发现方式无效")
+		return bad("发现方式无效")
 	}
 	targets, err := discoveryTargets(d.interfaces(), str(input["interface"]), str(input["cidr"]), mode)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	ctx, cancel := context.WithCancel(d.manager.ctx)
 	s := &discoveryScan{state: "scanning", phase: mode, mdns: "browsing", mode: mode, devices: map[string]Obj{}, protected: []string{}, ctx: ctx, cancel: cancel}
+	s.background = background
+	s.recovery = d.manager.lostLAN(1)
 	if len(targets) == 1 {
 		s.adapter, s.rangeCIDR = targets[0].adapter.ID, targets[0].cidr
 	}
@@ -465,6 +502,7 @@ func (d *Discovery) start(input Obj) (Obj, error) {
 		s.mdns = "skipped"
 	}
 	d.scan = s
+	d.nextRecovery = time.Now().Add(2 * time.Minute)
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
@@ -509,7 +547,7 @@ func (d *Discovery) start(input Obj) (Obj, error) {
 			s.state = "unavailable"
 		}
 	}()
-	return d.snapshotLocked(), nil
+	return nil
 }
 
 func (d *Discovery) verifyCandidates(s *discoveryScan, adapter Adapter, hosts []string, mode string) {
@@ -565,9 +603,9 @@ func (d *Discovery) verify(s *discoveryScan, address, source string) {
 	if s.ctx.Err() != nil {
 		return
 	}
-	d.mu.Lock()
-	defer d.mu.Unlock()
 	if err != nil {
+		d.mu.Lock()
+		defer d.mu.Unlock()
 		if codeOf(err) == "auth_failed" && !contains(s.protected, address) {
 			s.protected = append(s.protected, address)
 		}
@@ -584,15 +622,34 @@ func (d *Discovery) verify(s *discoveryScan, address, source string) {
 		version = version[:80]
 	}
 	key["version"] = version
-	s.devices[str(key["id"])] = key
+	id := str(key["id"])
+	key["recovered"] = d.manager.recoverAddress(s.ctx, s.recovery[id], info, address)
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if s.ctx.Err() != nil {
+		return
+	}
+	// mDNS and HTTP can find the same identity in parallel. Keep the recovered
+	// address and result instead of replacing them with a stale announcement.
+	if previous := s.devices[id]; !boolean(previous["recovered"]) {
+		s.devices[id] = key
+	}
 }
 func (d *Discovery) cancel() Obj {
 	d.mu.Lock()
-	if d.scan != nil && d.scan.state == "scanning" {
+	if d.scan != nil && d.scan.state == "scanning" && !d.scan.background && d.scan.viewers == nil {
 		d.scan.cancel()
 		d.scan.state = "cancelled"
 	}
 	d.mu.Unlock()
 	return d.snapshot()
 }
-func (d *Discovery) close() { d.cancel(); d.wg.Wait() }
+func (d *Discovery) close() {
+	d.mu.Lock()
+	d.closed = true
+	if d.scan != nil {
+		d.scan.cancel()
+	}
+	d.mu.Unlock()
+	d.wg.Wait()
+}

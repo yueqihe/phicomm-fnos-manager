@@ -39,6 +39,7 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
   // Discovery transport itself is tested in Go against a single loopback host.
   let discovery={interfaces:[],state:'complete',phase:'done',mdns:'complete',mode:'auto',devices:[],protectedAddresses:[],checked:0,total:0};
   const scans=[];let rejectDiscoverySource=false;
+  await context.route('**/api/discovery/automatic?*',route=>route.fulfill({json:{state:'complete',devices:[]}}));
   await context.route('**/api/discovery',route=>{
    if(route.request().method()==='POST'){scans.push(route.request().postDataJSON());if(rejectDiscoverySource) return route.fulfill({status:403,json:{error:'请求来源不正确',code:'invalid_origin'}});}
    if(route.request().method()==='DELETE'){discovery={...discovery,state:'cancelled'};}
@@ -221,6 +222,17 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
   await add.locator('[data-discovered-index="0"]').click();assert.equal(await add.getByLabel('设备内网地址',{exact:true}).inputValue(),'http://10.0.0.223');
   await page.setViewportSize({width:320,height:700});assert.equal(await add.evaluate(el=>el.scrollWidth>el.clientWidth),false);
   await page.screenshot({path:path.join(output,'discovery-manual-no-interface.png'),fullPage:true});
+  // A recovered identity stays registered; a pending address update remains selectable.
+  discovery={...discovery,devices:[{id:'tc1-aabbcc000201',model:'TC1',mac:'aabbcc000201',address:'http://10.0.0.225',added:true,recovered:true,canUpdate:false}]};
+  await add.getByRole('button',{name:'扫描设备',exact:true}).click();
+  await add.getByText('已恢复连接',{exact:true}).waitFor();
+  assert.equal(await add.locator('[data-discovered-index="0"]').isDisabled(),true);
+  discovery={...discovery,devices:discovery.devices.map(d=>({...d,recovered:false,canUpdate:true}))};
+  await add.getByRole('button',{name:'扫描设备',exact:true}).click();
+  await add.getByText('更新地址',{exact:true}).click();
+  assert.equal(await add.getByLabel('设备名称',{exact:true}).inputValue(),'客厅排插');
+  assert.equal(await add.getByLabel('所属空间',{exact:true}).inputValue(),'客厅');
+  assert.equal(await add.getByLabel('设备内网地址',{exact:true}).inputValue(),'http://10.0.0.225');
   await page.keyboard.press('Escape');await add.waitFor({state:'hidden'});
   await page.setViewportSize({width:1440,height:1000});
   await page.getByRole('button',{name:'列表',exact:true}).click();await page.locator('[data-device="m1-aabbcc000202"]').click();
@@ -317,6 +329,7 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
   await settings.getByRole('button',{name:'关闭设置',exact:true}).click();
   // A fresh browser with no stored preference must start in its system's theme.
   const fresh=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:3,colorScheme:'dark',hasTouch:true,isMobile:true});
+  await fresh.route('**/api/discovery/automatic?*',route=>route.fulfill({json:{state:'complete',devices:[]}}));
   const first=await fresh.newPage();await first.goto(url);await first.getByRole('button',{name:'设置',exact:true}).waitFor();
   assert.equal(await first.evaluate(()=>getComputedStyle(document.documentElement).colorScheme),'dark');
   for(const width of [320,360,390,700]) {
