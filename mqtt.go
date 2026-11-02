@@ -213,8 +213,8 @@ func (m *MQTT) start(config Obj, s *Store) error {
 			if msg.Retained() {
 				return
 			}
-			var response Obj
-			if json.Unmarshal(msg.Payload(), &response) != nil {
+			response, _, err := decodeDeviceWire(msg.Payload())
+			if err != nil {
 				return
 			}
 			m.mu.Lock()
@@ -259,7 +259,7 @@ func (m *MQTT) command(parent context.Context, d, request Obj) (Obj, error) {
 	m.pending[id] = pending
 	m.mu.Unlock()
 	defer func() { m.mu.Lock(); delete(m.pending, id); m.mu.Unlock() }()
-	raw, err := json.Marshal(request)
+	raw, err := encodeDeviceWire(request, d["mqttWire"] == "msgpack")
 	if err != nil {
 		return nil, err
 	}

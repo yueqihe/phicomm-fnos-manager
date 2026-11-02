@@ -1,12 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
 	"math"
 	"net"
 	"net/http"
@@ -174,41 +171,7 @@ func httpCommand(parent context.Context, address, password string, request Obj, 
 	}}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	raw, err := json.Marshal(request)
-	if err != nil {
-		return nil, err
-	}
-	req, err := http.NewRequestWithContext(ctx, "POST", address+"/api/v1/command", bytes.NewReader(raw))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	if password != "" {
-		req.SetBasicAuth("admin", password)
-	}
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, failure("设备连接超时或网络中断", 502, "transport_error")
-	}
-	defer res.Body.Close()
-	if res.StatusCode == 401 || res.StatusCode == 403 {
-		return nil, failure("设备网页密码不正确", 422, "auth_failed")
-	}
-	data, err := io.ReadAll(io.LimitReader(res.Body, 262145))
-	if err != nil {
-		return nil, failure("设备响应中断", 502, "transport_error")
-	}
-	if len(data) > 262144 {
-		return nil, failure("设备响应过大", 502, "protocol_error")
-	}
-	var payload Obj
-	if json.Unmarshal(data, &payload) != nil || payload == nil {
-		return nil, failure("设备返回的不是有效 JSON，请确认社区固件版本", 502, "protocol_error")
-	}
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return nil, failure(fmt.Sprintf("设备返回 HTTP %d", res.StatusCode), 502, "transport_error")
-	}
-	return result(payload, request)
+	return httpSession(address, password).command(ctx, client, address, password, request)
 }
 
 type Query func(string, Obj) (Obj, error)

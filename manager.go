@@ -855,7 +855,20 @@ func (m *Manager) onPacket(tail string, payload []byte, retained bool) {
 	parts := strings.Split(tail, "/")
 	var p Obj
 	if len(parts) == 2 && parts[0] == "discovery" {
-		if jsonDecode(payload, &p) != nil || num(p["schema"]) != 1 || p["protocol"] != "tmcp" || num(p["protocol_version"]) != 2 {
+		var binary bool
+		var err error
+		p, binary, err = decodeDeviceWire(payload)
+		if err != nil || (num(p["schema"]) != 1 && num(p["schema"]) != 2) || p["protocol"] != "tmcp" || num(p["protocol_version"]) != 2 {
+			return
+		}
+		if p["device_id"] != nil && macOf(p["device_id"]) != macOf(parts[1]) {
+			return
+		}
+		wire := "json"
+		if binary || p["default_wire_format"] == "msgpack" {
+			wire = "msgpack"
+		}
+		if num(p["schema"]) == 2 && !contains(stringsOf(p["wire_formats"]), wire) {
 			return
 		}
 		key, err := identity(str(p["model"]), parts[1])
@@ -865,9 +878,15 @@ func (m *Manager) onPacket(tail string, payload []byte, retained bool) {
 		id := str(key["id"])
 		m.mu.Lock()
 		defer m.mu.Unlock()
-		if m.ignored[id] || m.devices[id] != nil {
+		if m.ignored[id] {
 			return
 		}
+		if existing := m.devices[id]; existing != nil {
+			existing.d["mqttWire"] = wire
+			m.store.save(existing.d)
+			return
+		}
+		key["mqttWire"] = wire
 		key["name"] = fmt.Sprintf("%s-%s", key["model"], str(key["mac"])[8:])
 		key["room"] = "未分组"
 		key["method"] = "mqtt"
@@ -901,12 +920,27 @@ func (m *Manager) onPacket(tail string, payload []byte, retained bool) {
 			go m.refreshAsync(id)
 		}
 	case "capabilities":
-		if jsonDecode(payload, &p) == nil {
+		p, binary, err := decodeDeviceWire(payload)
+		if err == nil && (p["device_id"] == nil || verifyIdentity(p, e.d) == nil) {
 			e.r.actions = stringsOf(p["actions"])
+			wire := "json"
+			if binary {
+				wire = "msgpack"
+			}
+			if e.d["mqttWire"] != wire {
+				e.d["mqttWire"] = wire
+				m.store.save(e.d)
+			}
 		}
 	case "state":
-		if retained || !e.r.availability || jsonDecode(payload, &p) != nil || verifyIdentity(p, e.d) != nil {
+		p, binary, err := decodeDeviceWire(payload)
+		if retained || !e.r.availability || err != nil || verifyIdentity(p, e.d) != nil {
 			return
+		}
+		if binary {
+			e.d["mqttWire"] = "msgpack"
+		} else {
+			e.d["mqttWire"] = "json"
 		}
 		power := Obj{}
 		if e.d["model"] == "TC1" {
