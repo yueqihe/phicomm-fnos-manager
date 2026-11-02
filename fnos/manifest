@@ -1,6 +1,6 @@
 appname=phicomm-manager
 version=0.2.10
-display_name=斐讯设备管理
+display_name=IoT 设备管理
 desc=原生管理 TC1 智能排插、M1 空气检测仪、A1 空气净化器和 DAIKIN 大金检测仪，支持局域网与 MQTT 接入、空间管理和手机访问。
 source=thirdparty
 platform=arm

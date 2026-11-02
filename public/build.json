@@ -4,7 +4,7 @@
     "package.json": "956cd5bc03a95624e6891dd5d4c6fe3b3ad0dc134beef67dd51a3283e2b79045",
     "package-lock.json": "60ae51f838cd0073c21bed269880946379163765e7bd5411d827dd9db423e3ef",
     "scripts/build-web.mjs": "a45f804debf8d11fd428a408a2d5639a0fa52197c6367516020e5ff831d29b92",
-    "frontend/app.jsx": "a5d985c7c02534799f259d3100b886ce526ca93f207562d5139a3b2f97df66c4",
+    "frontend/app.jsx": "47e6aa9ba16b5f0f25ae3792293883d7dd2643958b655ded04495f070ad49c43",
     "frontend/automatic-discovery.jsx": "f5bc84469e7848b9f08d02848b575ca35feaffd3efb93753a79af8c0cd500ddf",
     "frontend/devices.jsx": "612bcb0de6828714226b69c0a69eb1710d0848e3aa13fc1ea2dcb36b43dfdd38",
     "frontend/dialogs.jsx": "52aaa5d4d7d1f977780b56c8c16daf11ddc1b63243610cbd8eee64f14d47f030",
@@ -18,8 +18,8 @@
     "frontend/ui.jsx": "bdf92ae860fb9a32845a528fd1dda72c1a5df6ed7a32031891d86db03482d848"
   },
   "assets": {
-    "public/index.html": "a3cb63f07bd24dbbb0731a11675aa75f4d60571227c54f7c34e3a16f95dfbf8b",
-    "public/app.js": "cc803e6c470655ea372f6e9edae88bf7bd19516491b7180d4a6e750c090cced8",
+    "public/index.html": "0bb60f902c1d501edae53662ce3be85c09e83382235e9abf58ce2ec88f76bc85",
+    "public/app.js": "29ff8681e786caf0d86f6396b188fd4ae46f0e4a1d0b7964f681920560aacd36",
     "public/styles.css": "9628a0dd589456d457d5257305bf4382658e18f534a27f7364be5a7f86de5b4d",
     "public/licenses/react.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
     "public/licenses/react-dom.LICENSE": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",

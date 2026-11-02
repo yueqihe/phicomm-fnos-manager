@@ -504,7 +504,7 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	m.start()
-	log.Printf("斐讯设备管理 %s (Go)，监听 %s，数据 %s", version, listener.Addr(), filepath.Clean(*dataDir))
+	log.Printf("IoT 设备管理 %s (Go)，监听 %s，数据 %s", version, listener.Addr(), filepath.Clean(*dataDir))
 	return serveUntilStopped(ctx, server, listener, 10*time.Second)
 }
 func main() {
