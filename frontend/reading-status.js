@@ -37,7 +37,7 @@ export function metricStatus(id,value) {
 export function deviceMetricStatus(device,id) {
   if(!device.online) return null;
   const s=device.state || {};
-  id ||= device.model === 'TC1' ? 'power' : ['M1','DAIKIN'].includes(device.model) ? 'pm25' : 'speed';
+  id ||= ['TC1','S30-V1B'].includes(device.model) ? 'power' : ['M1','DAIKIN'].includes(device.model) ? 'pm25' : 'speed';
   if((device.model === 'M1' && id !== 'co2' && !s.sensorValid) || (id === 'speed' && !s.on)) return null;
   const value=id === 'speed' ? s.appliedSpeed ?? s.speed : s[id], result=metricStatus(id,value);
   if(id === 'filter' && result && s.filterDue) return status('high','建议更换','设备已发出滤芯更换提示');

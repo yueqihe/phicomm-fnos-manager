@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -11,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type testFirmware struct {
@@ -28,6 +31,11 @@ func firmwareFixture(t *testing.T, model, mac string) *testFirmware {
 	f := &testFirmware{state: Obj{"model": strings.ToLower(model), "device_id": mac, "version": "fixture", "child_lock": false, "led_enabled": true}, power: Obj{"power_watts": 23.4, "energy_kwh": 1.23}}
 	f.actions = []string{"status.get", "capabilities.get", "config.set"}
 	switch model {
+	case "S30-V1B":
+		f.state["socket_states"] = []any{false}
+		f.state["socket_names"] = []string{"桌面插座"}
+		f.state["metering"] = Obj{"valid": true, "valid_fields": 7.0, "voltage": 230.5, "current": 0.125, "active_power": 23.4, "energy_kwh": 1.23}
+		f.actions = append(f.actions, "outlet.set", "power.get", "indicator.set", "child_lock.set")
 	case "TC1":
 		f.state["socket_states"] = []any{float64(0), float64(0), float64(0), float64(0), float64(0), float64(0)}
 		f.state["socket_names"] = []string{"插口 1", "插口 2", "插口 3", "插口 4", "插口 5", "插口 6"}
@@ -55,6 +63,16 @@ func firmwareFixture(t *testing.T, model, mac string) *testFirmware {
 	f.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		f.mu.Lock()
 		defer f.mu.Unlock()
+		if model == "S30-V1B" {
+			if r.Header.Get("Accept") != "application/msgpack" {
+				writeMsgpack(t, w, 406, Obj{"code": "not_acceptable"})
+				return
+			}
+			if r.Method == "GET" && r.URL.Path == "/api/v1/info" {
+				writeMsgpack(t, w, 200, Obj{"code": "ok", "data": Obj{"model": "s30-v1b", "device_id": mac, "protocol": "openiot", "command_protocol": "tmcp", "default_wire_format": "msgpack"}})
+				return
+			}
+		}
 		if f.password != "" {
 			user, password, ok := r.BasicAuth()
 			if !ok || user != "admin" || password != f.password {
@@ -67,14 +85,33 @@ func firmwareFixture(t *testing.T, model, mac string) *testFirmware {
 			return
 		}
 		var request Obj
-		json.NewDecoder(r.Body).Decode(&request)
+		if model == "S30-V1B" {
+			if r.Header.Get("Content-Type") != "application/msgpack" {
+				writeMsgpack(t, w, 415, Obj{"code": "unsupported_media_type"})
+				return
+			}
+			raw, _ := io.ReadAll(r.Body)
+			if err := msgpack.Unmarshal(raw, &request); err != nil {
+				t.Error(err)
+				return
+			}
+			// Normalize fixture params independently through JSON, including indexes.
+			raw, _ = json.Marshal(request)
+			json.Unmarshal(raw, &request)
+		} else {
+			json.NewDecoder(r.Body).Decode(&request)
+		}
 		response := f.command(request)
 		if f.drop && !strings.HasSuffix(str(request["action"]), ".get") {
 			conn, _, _ := w.(http.Hijacker).Hijack()
 			conn.Close()
 			return
 		}
-		sendJSON(w, 200, response)
+		if model == "S30-V1B" {
+			writeMsgpack(t, w, 200, response)
+		} else {
+			sendJSON(w, 200, response)
+		}
 	}))
 	t.Cleanup(f.server.Close)
 	return f

@@ -46,11 +46,11 @@ func TestDataCSVExportsAllRawReadings(t *testing.T) {
 		t.Fatal("missing BOM, read failure or credentials included", err)
 	}
 	records, err := csv.NewReader(strings.NewReader(strings.TrimPrefix(string(raw), "\ufeff"))).ReadAll()
-	if err != nil || len(records) != 6 || len(records[0]) != 18 {
+	if err != nil || len(records) != 6 || len(records[0]) != 20 {
 		t.Fatal("lost raw rows or columns", err, records)
 	}
 	for _, row := range records {
-		if len(row) != 18 {
+		if len(row) != 20 {
 			t.Fatal("incorrect CSV quoting", row)
 		}
 	}

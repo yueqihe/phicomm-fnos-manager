@@ -259,7 +259,7 @@ func (m *MQTT) command(parent context.Context, d, request Obj) (Obj, error) {
 	m.pending[id] = pending
 	m.mu.Unlock()
 	defer func() { m.mu.Lock(); delete(m.pending, id); m.mu.Unlock() }()
-	raw, err := encodeDeviceWire(request, d["mqttWire"] == "msgpack")
+	raw, err := encodeDeviceWire(request, d["mqttWire"] == "msgpack" || d["model"] == "S30-V1B")
 	if err != nil {
 		return nil, err
 	}

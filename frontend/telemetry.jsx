@@ -1,5 +1,5 @@
 import React, {useEffect, useId, useRef, useState} from 'react';
-import {api, Field, Select, metric} from './ui.jsx';
+import {api, Field, Select, metric, isMeteredPlug} from './ui.jsx';
 import {ReadingValue} from './readings.jsx';
 
 const ranges=[['24h','最近 24 小时'],['7d','最近 7 天'],['30d','最近 30 天']];
@@ -99,14 +99,14 @@ function DeviceData({device:d,range,initialMetric,saveChartMetric}) {
   const {data,error,refresh}=useDeviceHistory(d.id,range);
   const [selected,setSelected]=useState(initialMetric || '');
   const current=data?.metrics.find(m => m.id === selected) || data?.metrics[0], stats=data?.summary[current?.id];
-  const summary=d.model === 'TC1' && data ? [['区间用电',data.summary.energy.total,'度',3,'energy'],['预估花费',data.summary.cost.total,'元',2,'cost'],['平均功率',data.summary.power.avg,'W',1,'power']] : current ? [['平均值',stats.avg,current.unit,current.digits,current.id],['最低值',stats.min,current.unit,current.digits,current.id],['最高值',stats.max,current.unit,current.digits,current.id]] : [];
+  const summary=isMeteredPlug(d) && data && ['power','energy','cost'].includes(current?.id) ? [['区间用电',data.summary.energy.total,'度',3,'energy'],['预估花费',data.summary.cost.total,'元',2,'cost'],['平均功率',data.summary.power.avg,'W',1,'power']] : current ? [['平均值',stats.avg,current.unit,current.digits,current.id],['最低值',stats.min,current.unit,current.digits,current.id],['最高值',stats.max,current.unit,current.digits,current.id]] : [];
   return <>
     {error && <div className="pm-history-error" role="alert"><span>{error}</span><button className="pm-btn" onClick={refresh}>重试</button></div>}
     {!data && !error ? <div className="pm-empty" role="status">正在读取历史数据…</div> : data && <>
       <div className="pm-history-summary">{summary.map(([label,n,unit,digits,id]) => <div key={label}><span>{label}</span><strong><ReadingValue value={n} metricId={id} digits={digits} unit={unit}/></strong></div>)}</div>
       <div className="pm-history-chart-head"><Field label="数据指标"><Select value={current.id} onChange={e => setSelected(e.target.value)}>{data.metrics.map(m => <option key={m.id} value={m.id}>{m.label} · {m.unit}</option>)}</Select></Field><DefaultChartMetric device={d} metrics={data.metrics} saveChartMetric={saveChartMetric}/><button className="pm-text-action" disabled={!data.samples} onClick={() => exportData(data,d)}>导出 CSV</button></div>
       {data.samples ? <Trend data={data} selected={current}/> : <div className="pm-trend-empty">所选时段暂无历史数据，设备上线后会自动记录。</div>}
-      {d.model === 'TC1' && <p className="pm-history-footnote">用电和花费按所选时段内的实际读数差额统计，归零后重新起算；花费沿用当时的电价估算，不追溯未计费的用电。</p>}
+      {isMeteredPlug(d) && <p className="pm-history-footnote">用电和花费按所选时段内的实际读数差额统计，归零后重新起算；花费沿用当时的电价估算，不追溯未计费的用电。</p>}
     </>}
   </>;
 }

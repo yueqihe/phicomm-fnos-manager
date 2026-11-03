@@ -145,7 +145,7 @@ func (m *Manager) public(e *deviceEntry) Obj {
 		err = e.r.lanErr
 	}
 	var bill any
-	if d["model"] == "TC1" {
+	if meteredPlug(str(d["model"])) {
 		bill = billingSummary(obj(d["billing"]), m.tariff, float64(time.Now().UnixMilli()))
 	}
 	return clone(Obj{"id": d["id"], "model": d["model"], "mac": d["mac"], "name": d["name"], "room": d["room"], "method": d["method"], "address": str(d["address"]), "passwordSet": str(d["password"]) != "", "online": lan || mqtt, "lan": lan, "mqtt": mqtt, "lastSeen": d["lastSeen"], "state": d["state"], "billing": bill, "actions": e.r.actions, "error": err, "busy": e.r.busy, "chartMetric": chartMetric(d), "chartMetrics": dataMetrics(str(d["model"]))})
@@ -295,7 +295,7 @@ func (m *Manager) applyReading(e *deviceEntry, state Obj, actions []string, rout
 	now := time.Now()
 	e.d["state"] = state
 	e.d["lastSeen"] = now.UTC().Format(time.RFC3339Nano)
-	if e.d["model"] == "TC1" {
+	if meteredPlug(str(e.d["model"])) {
 		var prev Obj
 		if e.d["billing"] != nil {
 			prev = obj(e.d["billing"])
@@ -594,11 +594,12 @@ func matches(s Obj, action string, p Obj) bool {
 		return p["section"] == "socket" && index >= 0 && index < len(names) && names[index] == values["name"]
 	case "outlet.set":
 		outlets := arr(s["outlets"])
-		if len(outlets) != 6 {
+		if len(outlets) != 6 && len(outlets) != 1 {
 			return false
 		}
 		if index, exists := p["index"]; exists {
-			return outlets[int(num(index))] == p["on"]
+			i := int(num(index))
+			return i >= 0 && i < len(outlets) && outlets[i] == p["on"]
 		}
 		for _, v := range outlets {
 			if v != p["on"] {
@@ -745,7 +746,7 @@ func (m *Manager) provision(ctx context.Context, id string) (Obj, error) {
 		return nil, err
 	}
 	values := Obj{"host": c["host"], "port": c["port"], "user": c["username"], "password": password}
-	if model == "TC1" {
+	if meteredPlug(model) {
 		values["protocol"] = "tmcp"
 	}
 	response, err := m.write(ctx, e, "config.set", Obj{"section": "mqtt", "values": values})
@@ -858,7 +859,7 @@ func (m *Manager) onPacket(tail string, payload []byte, retained bool) {
 		var binary bool
 		var err error
 		p, binary, err = decodeDeviceWire(payload)
-		if err != nil || (num(p["schema"]) != 1 && num(p["schema"]) != 2) || p["protocol"] != "tmcp" || num(p["protocol_version"]) != 2 {
+		if err != nil || (num(p["schema"]) != 1 && num(p["schema"]) != 2) || (p["protocol"] != "tmcp" && !(p["protocol"] == "openiot" && p["command_protocol"] == "tmcp")) || num(p["protocol_version"]) != 2 {
 			return
 		}
 		if p["device_id"] != nil && macOf(p["device_id"]) != macOf(parts[1]) {
@@ -950,6 +951,15 @@ func (m *Manager) onPacket(tail string, payload []byte, retained bool) {
 		e.d["state"] = normalize(str(e.d["model"]), p, power)
 		e.d["lastSeen"] = time.Now().UTC().Format(time.RFC3339Nano)
 		e.r.mqttLast = time.Now()
+		if e.d["model"] == "S30-V1B" {
+			var prev Obj
+			if e.d["billing"] != nil {
+				prev = obj(e.d["billing"])
+			}
+			if bill := recordEnergy(prev, obj(e.d["state"])["energy"], m.tariff, float64(time.Now().UnixMilli())); bill != nil {
+				e.d["billing"] = bill
+			}
+		}
 		m.store.save(e.d)
 		if e.d["model"] != "TC1" {
 			m.store.recordSample(e.d, time.Now().UnixMilli())

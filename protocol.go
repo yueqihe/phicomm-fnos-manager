@@ -34,8 +34,19 @@ func codeOf(err error) string {
 var macPattern = regexp.MustCompile(`^[0-9a-f]{12}$`)
 
 func supportedModel(model string) bool {
-	return contains([]string{"TC1", "M1", "A1", "DAIKIN"}, model)
+	return contains([]string{"TC1", "M1", "A1", "DAIKIN", "S30-V1B"}, model)
 }
+
+func socketCount(model string) int {
+	if model == "TC1" {
+		return 6
+	}
+	if model == "S30-V1B" {
+		return 1
+	}
+	return 0
+}
+func meteredPlug(model string) bool { return socketCount(model) > 0 }
 
 func macOf(v any) string {
 	return strings.ToLower(strings.NewReplacer(":", "", "-", "").Replace(str(v)))
@@ -226,11 +237,12 @@ func normalize(model string, s, p Obj) Obj {
 		}
 	}
 	switch model {
-	case "TC1":
+	case "TC1", "S30-V1B":
+		count := socketCount(model)
 		states := arr(s["socket_states"])
 		outlets := []bool{}
 		on := false
-		if len(states) == 6 {
+		if len(states) == count {
 			for _, v := range states {
 				b := boolean(v) || v == float64(1)
 				outlets = append(outlets, b)
@@ -239,7 +251,7 @@ func normalize(model string, s, p Obj) Obj {
 		}
 		names := []string{}
 		raw := arr(s["socket_names"])
-		for i := 0; i < 6; i++ {
+		for i := 0; i < count; i++ {
 			name := ""
 			if i < len(raw) {
 				name = str(raw[i])
@@ -250,6 +262,28 @@ func normalize(model string, s, p Obj) Obj {
 			names = append(names, name)
 		}
 		put(Obj{"outlets": outlets, "outletNames": names, "on": on, "light": boolean(s["led_enabled"]), "power": finite(p["power_watts"]), "energy": finite(p["energy_kwh"])})
+		if model == "S30-V1B" {
+			meter := obj(s["metering"])
+			// The full status contains all metering fields; do not add another poll.
+			fields := num(meter["valid_fields"])
+			for key, field := range map[string]struct {
+				name string
+				bit  int
+			}{
+				"voltage": {"voltage", 1}, "current": {"current", 2}, "power": {"active_power", 4},
+			} {
+				out[key] = nil
+				if finite(meter["valid_fields"]) != nil && fields >= 0 && fields <= 7 && math.Trunc(fields) == fields && int(fields)&field.bit != 0 {
+					if n := finite(meter[field.name]); n != nil && num(n) >= 0 {
+						out[key] = n
+					}
+				}
+			}
+			out["energy"] = finite(meter["energy_kwh"])
+			if out["energy"] != nil && num(out["energy"]) < 0 {
+				out["energy"] = nil
+			}
+		}
 	case "M1":
 		var brightness any
 		if n := finite(s["brightness_requested"]); n != nil {
@@ -307,14 +341,14 @@ func validateControl(model, action string, p Obj) error {
 	has := func(k string) bool { _, ok := p[k]; return ok }
 	ok := false
 	switch {
-	case model == "TC1" && action == "outlet.set":
-		ok = allowed("index", "on") && isBool("on") && (!has("index") || integer("index", 0, 5))
-	case model == "TC1" && action == "config.set":
+	case meteredPlug(model) && action == "outlet.set":
+		ok = allowed("index", "on") && isBool("on") && (!has("index") || integer("index", 0, float64(socketCount(model)-1)))
+	case meteredPlug(model) && action == "config.set":
 		values := obj(p["values"])
 		name, validName := values["name"].(string)
 		index, validIndex := values["index"].(float64)
 		ok = allowed("section", "values") && p["section"] == "socket" && len(values) == 2 &&
-			validIndex && index >= 0 && index <= 5 && math.Trunc(index) == index &&
+			validIndex && index >= 0 && index < float64(socketCount(model)) && math.Trunc(index) == index &&
 			validName && utf8.ValidString(name) && strings.TrimSpace(name) != "" && len(name) <= 63 &&
 			strings.IndexFunc(name, func(r rune) bool { return r < 32 || r == 127 }) < 0
 	case model == "M1" && action == "display.set":
@@ -323,7 +357,7 @@ func validateControl(model, action string, p Obj) error {
 		ok = allowed("on", "speed", "mode") && (!has("on") || isBool("on")) && (!has("speed") || integer("speed", 0, 100)) && (!has("mode") || p["mode"] == "auto" || p["mode"] == "manual")
 	case model == "A1" && action == "fan.mode.set":
 		ok = allowed("mode") && (p["mode"] == "auto" || p["mode"] == "manual")
-	case ((model == "TC1" || model == "DAIKIN") && action == "indicator.set") || (model == "A1" && action == "light.set") || ((model == "TC1" || model == "A1") && action == "child_lock.set"):
+	case ((meteredPlug(model) || model == "DAIKIN") && action == "indicator.set") || (model == "A1" && action == "light.set") || ((meteredPlug(model) || model == "A1") && action == "child_lock.set"):
 		ok = allowed("enabled") && isBool("enabled")
 	}
 	if !ok {

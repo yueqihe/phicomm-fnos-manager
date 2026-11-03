@@ -64,10 +64,11 @@ func deviceHTTPRequest(ctx context.Context, client *http.Client, method, url, pa
 	}
 	if binary {
 		req.Header.Set("Content-Type", "application/msgpack")
+		req.Header.Set("Accept", "application/msgpack")
 	} else {
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/json")
 	}
-	req.Header.Set("Accept", "application/msgpack, application/json")
 	if bearer != "" {
 		req.Header.Set("Authorization", "Bearer "+bearer)
 	} else if password != "" {
@@ -94,7 +95,11 @@ func deviceHTTPRequest(ctx context.Context, client *http.Client, method, url, pa
 }
 
 func (s *deviceHTTPSession) negotiate(ctx context.Context, client *http.Client, address string) error {
-	reply, err := deviceHTTPRequest(ctx, client, "GET", address+"/api/v1/info", "", "", nil, false)
+	reply, err := deviceHTTPRequest(ctx, client, "GET", address+"/api/v1/info", "", "", nil, true)
+	if reply.status == http.StatusNotAcceptable {
+		// Old JSON-only firmware can reject a MessagePack response preference.
+		reply, err = deviceHTTPRequest(ctx, client, "GET", address+"/api/v1/info", "", "", nil, false)
+	}
 	if err != nil && reply.status == 0 {
 		return err
 	}

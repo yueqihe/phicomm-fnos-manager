@@ -5,8 +5,10 @@ export {Select};
 
 const icons = {layers: Layers2, settings: Settings2, history: History, x: X, plus: Plus, list: List, grid: LayoutGrid, plug: PlugZap, air: AirVent, wind: Wind, unplug: Unplug, arrow: ArrowUpRight, edit: Pencil};
 export function Icon({name}) { const Component = icons[name]; return <Component size={17} strokeWidth={1.6} aria-hidden="true"/>; }
+export const isMeteredPlug = device => ['TC1','S30-V1B'].includes(device.model);
+export const outletCount = device => device.model === 'S30-V1B' ? 1 : 6;
 export const isAirMonitor = device => ['M1','DAIKIN'].includes(device.model);
-export function DeviceIcon({device}) { return <Icon name={device.model === 'TC1' ? 'plug' : isAirMonitor(device) ? 'air' : 'wind'}/>; }
+export function DeviceIcon({device}) { return <Icon name={isMeteredPlug(device) ? 'plug' : isAirMonitor(device) ? 'air' : 'wind'}/>; }
 export function Dot({online}) { return <span className={`pm-dot${online ? '' : ' pm-dot-off'}`}/>; }
 export function Status({device}) { return <span className="pm-status"><Dot online={device.online}/>{device.online ? '在线' : '离线'}</span>; }
 export const metric = (value, digits) => typeof value === 'number' && Number.isFinite(value) ? digits === undefined ? String(value) : value.toFixed(digits) : '—';

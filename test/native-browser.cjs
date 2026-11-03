@@ -357,6 +357,7 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
   await first.evaluate(()=>localStorage.setItem('pm-view','list'));await first.reload();await first.getByRole('button',{name:'设置',exact:true}).waitFor();
   assert.equal(await first.locator('.pm-app').getAttribute('data-layout'),'rooms','opening must default to rooms even with an old saved list view');
   await fresh.close();
+  await require('./s30-browser.cjs')(page,fixtures,output);
   assert.ok(writeTokens.length>10&&writeTokens.every(token=>/^[a-f0-9]{64}$/.test(token)),'all API writes must carry the authenticated page request token');
   assert.deepEqual(errors,[]);
   console.log('Go + React browser passed: compact room power/energy, control-dialog cost and tariff entry, bidirectional outlet names, failed writes and draft preservation, light/dark/system themes, automatic updates, three models, discovery and 320–1440px.');

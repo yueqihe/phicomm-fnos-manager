@@ -139,7 +139,7 @@ func probeHTTP(ctx context.Context, host, local string, port int) bool {
 	return true
 }
 
-var mdnsServices = []string{"_easylink._tcp.local.", "_phicomm._tcp.local.", "_http._tcp.local."}
+var mdnsServices = []string{"_easylink._tcp.local.", "_phicomm._tcp.local.", "_http._tcp.local.", "_openiot._udp.local."}
 
 type mdnsInstance struct {
 	service, target string
@@ -226,7 +226,7 @@ func (c *mdnsCache) addresses() []string {
 	out := []string{}
 	for _, instance := range c.instances {
 		port := instance.port
-		if instance.service == mdnsServices[0] {
+		if instance.service == mdnsServices[0] || instance.service == "_openiot._udp.local." {
 			port = 80
 		}
 		if instance.target == "" || port == 0 {

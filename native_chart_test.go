@@ -13,6 +13,7 @@ func TestChartMetricDefaultsValidationAndPersistence(t *testing.T) {
 		{"M1", "aabbcc000602", "pm25", "temp", "power"},
 		{"A1", "aabbcc000603", "speed", "filter", "humidity"},
 		{"DAIKIN", "aabbcc000604", "pm25", "tvoc", "speed"},
+		{"S30-V1B", "aabbcc000605", "power", "voltage", "co2"},
 	} {
 		status, response := requestJSON(t, server, "devices", "POST", Obj{"model": check.model, "mac": check.mac, "method": "mqtt"})
 		d := obj(response["device"])

@@ -20,8 +20,12 @@ type dataMetric struct {
 
 func dataMetrics(model string) []dataMetric {
 	switch model {
-	case "TC1":
-		return []dataMetric{{"power", "功率", "W", 1, false}, {"energy", "用电量", "度", 3, true}, {"cost", "预估花费", "元", 2, true}}
+	case "TC1", "S30-V1B":
+		metrics := []dataMetric{{"power", "功率", "W", 1, false}, {"energy", "用电量", "度", 3, true}, {"cost", "预估花费", "元", 2, true}}
+		if model == "S30-V1B" {
+			metrics = append(metrics, dataMetric{"voltage", "电压", "V", 1, false}, dataMetric{"current", "电流", "A", 3, false})
+		}
+		return metrics
 	case "M1":
 		return []dataMetric{{"pm25", "PM2.5", "μg/m³", 0, false}, {"hcho", "甲醛", "mg/m³", 3, false}, {"temp", "温度", "°C", 1, false}, {"humidity", "湿度", "%", 1, false}, {"co2", "CO₂", "ppm", 0, false}}
 	case "DAIKIN":
@@ -50,8 +54,12 @@ func (s *Store) recordSample(d Obj, at int64) {
 	state, values := obj(d["state"]), Obj{}
 	put := func(key string, value any) { values[key] = finite(value) }
 	switch d["model"] {
-	case "TC1":
+	case "TC1", "S30-V1B":
 		put("power", state["power"])
+		if d["model"] == "S30-V1B" {
+			put("voltage", state["voltage"])
+			put("current", state["current"])
+		}
 		if n := finite(state["energy"]); n != nil && num(n) >= 0 {
 			put("meter", n)
 		}
@@ -178,7 +186,7 @@ func (s *Store) dataHistory(ctx context.Context, id, model, span string, now int
 		count++
 		// Counter differences use only actual readings within the selected period.
 		// Meter resets establish a new baseline; no negative usage or invented history.
-		if model == "TC1" {
+		if meteredPlug(model) {
 			for key, counter := range map[string]string{"energy": "meter", "cost": "costTotal"} {
 				a, aOK := finite(previous[counter]).(float64)
 				b, bOK := finite(values[counter]).(float64)
