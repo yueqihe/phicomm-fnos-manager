@@ -46,7 +46,7 @@ func TestRefreshSettingsSurviveRestart(t *testing.T) {
 		}
 		m, err := newManager(s, time.Second, 15*time.Second)
 		if err != nil {
-			s.db.Close()
+			s.Close()
 			t.Fatal(err)
 		}
 		if attempt == 0 {

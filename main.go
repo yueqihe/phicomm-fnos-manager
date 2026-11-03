@@ -448,26 +448,26 @@ func run() error {
 	}
 	initialize(s)
 	if *initOnly {
-		return s.db.Close()
+		return s.Close()
 	}
 	*base = strings.TrimSuffix(*base, "/")
 	if *base != "" && (!strings.HasPrefix(*base, "/") || strings.Contains(*base, "..") || strings.Contains(*base, "//")) {
-		s.db.Close()
+		s.Close()
 		return fmt.Errorf("无效网关路径")
 	}
 	if !*dev && *socket == "" {
-		s.db.Close()
+		s.Close()
 		return fmt.Errorf("飞牛认证模式必须使用本地 Socket")
 	}
 	var listener net.Listener
 	if *socket != "" {
 		if !abandonedSocket(*socket) {
-			s.db.Close()
+			s.Close()
 			return fmt.Errorf("Socket 仍在使用或路径不可访问")
 		}
 		if info, err := os.Lstat(*socket); err == nil && info.Mode()&os.ModeSocket != 0 {
 			if err = os.Remove(*socket); err != nil {
-				s.db.Close()
+				s.Close()
 				return err
 			}
 		}
@@ -478,7 +478,7 @@ func run() error {
 	} else {
 		host, _, e := net.SplitHostPort(*listen)
 		if e != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
-			s.db.Close()
+			s.Close()
 			return fmt.Errorf("开发模式仅允许监听回环地址")
 		}
 		listener, err = net.Listen("tcp", *listen)
@@ -487,13 +487,13 @@ func run() error {
 		if listener != nil {
 			listener.Close()
 		}
-		s.db.Close()
+		s.Close()
 		return err
 	}
 	defer listener.Close()
 	m, err := newManager(s, 5*time.Second, 15*time.Second)
 	if err != nil {
-		s.db.Close()
+		s.Close()
 		return err
 	}
 	app := &App{manager: m, base: *base, dev: *dev}

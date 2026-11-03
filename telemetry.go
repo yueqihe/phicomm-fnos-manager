@@ -99,6 +99,8 @@ func (s *Store) recordSample(d Obj, at int64) {
 func (s *Store) pruneSamples(at int64) {
 	_, err := s.db.Exec("DELETE FROM telemetry WHERE at < ?", at-sampleRetention)
 	must(err)
+	_, err = s.db.Exec("DELETE FROM telemetry_hours WHERE hour < ?", (at-sampleRetention)/historyHour*historyHour)
+	must(err)
 	s.lastPrune = at
 }
 
@@ -111,8 +113,11 @@ func (s *Store) maintainSamples(at int64) {
 }
 
 type dataStats struct {
-	count               int
-	sum, min, max, last float64
+	Count int     `json:"n"`
+	Sum   float64 `json:"s"`
+	Min   float64 `json:"l"`
+	Max   float64 `json:"h"`
+	Last  float64 `json:"v"`
 }
 
 func (s *dataStats) add(value any) {
@@ -120,23 +125,23 @@ func (s *dataStats) add(value any) {
 	if !ok {
 		return
 	}
-	if s.count == 0 {
-		s.min, s.max = n, n
+	if s.Count == 0 {
+		s.Min, s.Max = n, n
 	}
-	s.count++
-	s.sum += n
-	s.min = math.Min(s.min, n)
-	s.max = math.Max(s.max, n)
-	s.last = n
+	s.Count++
+	s.Sum += n
+	s.Min = math.Min(s.Min, n)
+	s.Max = math.Max(s.Max, n)
+	s.Last = n
 }
 func (s dataStats) public() Obj {
-	if s.count == 0 {
+	if s.Count == 0 {
 		return Obj{"count": 0, "min": nil, "max": nil, "avg": nil, "total": nil, "latest": nil}
 	}
-	return Obj{"count": s.count, "min": s.min, "max": s.max, "avg": s.sum / float64(s.count), "total": s.sum, "latest": s.last}
+	return Obj{"count": s.Count, "min": s.Min, "max": s.Max, "avg": s.Sum / float64(s.Count), "total": s.Sum, "latest": s.Last}
 }
 
-func (s *Store) dataHistory(ctx context.Context, id, model, span string, now int64) (Obj, error) {
+func (s *Store) rawDataHistory(ctx context.Context, id, model, span string, now int64) (Obj, error) {
 	duration, step := int64(0), int64(0)
 	switch span {
 	case "24h":
@@ -162,7 +167,7 @@ func (s *Store) dataHistory(ctx context.Context, id, model, span string, now int
 	for _, metric := range metrics {
 		summary[metric.ID] = &dataStats{}
 	}
-	rows, err := s.db.QueryContext(ctx, "SELECT at,value FROM telemetry WHERE device_id=? AND minute>=? AND minute<=? AND at>=? AND at<=? ORDER BY minute", id, from/sampleInterval, now/sampleInterval, from, now)
+	rows, err := s.readDB.QueryContext(ctx, "SELECT at,value FROM telemetry WHERE device_id=? AND minute>=? AND minute<=? AND at>=? AND at<=? ORDER BY minute", id, from/sampleInterval, now/sampleInterval, from, now)
 	if err != nil {
 		return nil, err
 	}
@@ -213,10 +218,10 @@ func (s *Store) dataHistory(ctx context.Context, id, model, span string, now int
 		for _, metric := range metrics {
 			stat := bucket[metric.ID]
 			var value any
-			if stat.count > 0 {
-				value = stat.sum
+			if stat.Count > 0 {
+				value = stat.Sum
 				if !metric.Total {
-					value = stat.sum / float64(stat.count)
+					value = stat.Sum / float64(stat.Count)
 				}
 			}
 			values[metric.ID] = value

@@ -25,7 +25,7 @@ func csvText(value string) string {
 }
 
 func (s *Store) writeDataCSV(ctx context.Context, out io.Writer) error {
-	rows, err := s.db.QueryContext(ctx, `SELECT t.device_id,t.at,t.value,
+	rows, err := s.exportDB.QueryContext(ctx, `SELECT t.device_id,t.at,t.value,
  COALESCE(d.model,''),COALESCE(d.mac,''),
  COALESCE(json_extract(d.value,'$.name'),''),COALESCE(json_extract(d.value,'$.room'),'')
  FROM telemetry t LEFT JOIN devices d ON d.id=t.device_id ORDER BY t.device_id,t.minute`)
@@ -78,8 +78,8 @@ func (s *Store) writeDataCSV(ctx context.Context, out io.Writer) error {
 }
 
 func (a *App) exportData(w http.ResponseWriter, r *http.Request) (int, any, error) {
-	// Prepare on disk so a slow download never holds the single SQLite
-	// connection or builds the complete history in browser/server memory.
+	// Prepare on disk using a dedicated read-only connection. A slow download
+	// holds no database snapshot and never builds the entire CSV in memory.
 	file, err := os.CreateTemp("", "phicomm-history-*.csv")
 	if err != nil {
 		return 0, nil, err

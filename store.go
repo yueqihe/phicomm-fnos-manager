@@ -21,6 +21,9 @@ import (
 type Obj = map[string]any
 type Store struct {
 	db        *sql.DB
+	readDB    *sql.DB
+	exportDB  *sql.DB
+	charts    historyCache
 	key       []byte
 	dataMu    sync.Mutex
 	lastPrune int64
@@ -79,8 +82,22 @@ func openStore(dir string) (*Store, error) {
 	}
 	_ = os.Chmod(filepath.Join(dir, "manager.sqlite"), 0600)
 	s := &Store{db: db, key: key}
+	if err = s.openHistoryReaders(dir); err != nil {
+		s.Close()
+		return nil, err
+	}
 	s.pruneSamples(time.Now().UnixMilli())
 	return s, nil
+}
+
+func (s *Store) Close() error {
+	var errs []error
+	for _, db := range []*sql.DB{s.exportDB, s.readDB, s.db} {
+		if db != nil {
+			errs = append(errs, db.Close())
+		}
+	}
+	return errors.Join(errs...)
 }
 func (s *Store) get(key string, fallback any) any {
 	var raw string

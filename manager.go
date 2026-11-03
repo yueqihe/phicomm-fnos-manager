@@ -98,7 +98,7 @@ func (m *Manager) close() {
 	m.mu.Unlock()
 	transport.stop()
 	m.wg.Wait()
-	m.store.db.Close()
+	m.store.Close()
 }
 func (m *Manager) refreshAsync(id string) {
 	m.mu.Lock()

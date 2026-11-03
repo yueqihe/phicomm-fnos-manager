@@ -68,7 +68,7 @@ func TestUpgradeFromNodeSQLiteAndAESWithoutNodeRuntime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.db.Close()
+	defer s.Close()
 	if s.devices()[0]["room"] != "书房" {
 		t.Fatal("restart lost configuration")
 	}

@@ -107,7 +107,7 @@ func TestRealUnixSocketGatewayAndReadiness(t *testing.T) {
 	}
 	m, err := newManager(s, time.Second, time.Hour)
 	if err != nil {
-		s.db.Close()
+		s.Close()
 		t.Fatal(err)
 	}
 	defer m.close()

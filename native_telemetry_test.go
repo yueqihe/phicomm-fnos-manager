@@ -66,12 +66,12 @@ func TestDataHistoryCountersSamplingAndRetention(t *testing.T) {
 	if err = s.db.QueryRow("SELECT COUNT(*) FROM telemetry WHERE at<?", now-sampleRetention).Scan(&old); err != nil || old != 0 {
 		t.Fatal("retention failed", old, err)
 	}
-	s.db.Close()
+	s.Close()
 	s, err = openStore(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer s.db.Close()
+	defer s.Close()
 	write(now-3*sampleInterval+5000, 999.0, 999.0, 999.0)
 	data, err = s.dataHistory(context.Background(), id, "TC1", "24h", now)
 	if err != nil || data["samples"] != 7 {
