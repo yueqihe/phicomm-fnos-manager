@@ -20,19 +20,19 @@
 
 需要 fnOS 1.2.0 及以上，以及刷入兼容社区固件的 TC1 / M1 / A1 / DAIKIN / S30-V1B。[查看最新版本](https://github.com/yueqihe/phicomm-fnos-manager/releases/latest)。
 
-当前发布版本为 **0.2.10**，安装后仍显示旧名称“斐讯设备管理”。当前源码已更名为 **IoT 设备管理**，并新增 S30-V1B 支持；这些变更将在后续安装包中提供，升级将沿用原应用和数据。下载对应架构的安装包；自行构建请参阅下方“开发与构建”。
+当前发布版本为 **0.2.11**，应用更名为 **IoT 设备管理**，新增 S30-V1B 支持并适配大金新版接口；升级沿用原应用和数据。下载对应架构的安装包；自行构建请参阅下方“开发与构建”。
 
-| NAS 架构 | 安装包（0.2.10） |
+| NAS 架构 | 安装包（0.2.11） |
 | --- | --- |
-| ARM64 / AArch64 | [phicomm-manager-0.2.10-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.10/phicomm-manager-0.2.10-arm.fpk) |
-| x86-64 / AMD64 | [phicomm-manager-0.2.10-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.10/phicomm-manager-0.2.10-x86.fpk) |
+| ARM64 / AArch64 | [phicomm-manager-0.2.11-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.11/phicomm-manager-0.2.11-arm.fpk) |
+| x86-64 / AMD64 | [phicomm-manager-0.2.11-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.11/phicomm-manager-0.2.11-x86.fpk) |
 
 1. 在飞牛应用中心选择手动安装，上传对应架构的 FPK。
 2. 使用飞牛管理员账号，从桌面打开“IoT 设备管理”，无需再设置应用管理密码。
 3. 点击列表或空间视图下方的“添加设备”，扫描设备或填写设备内网地址。
 4. 在“设置”中调整设备连接、MQTT 服务和电价；“外观”可选择浅色、深色或跟随系统，即时生效并记住此设备的偏好。
 
-从 0.1.x 或 0.2.0–0.2.9 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
+从 0.1.x 或 0.2.0–0.2.10 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
 
 ## 通过 fnOS 远程控制
 
@@ -48,7 +48,7 @@
 
 - TC1 / M1 / A1 / DAIKIN / S30-V1B 集中查看与控制，支持设备列表、按空间管理和手机自适应界面。
 - DAIKIN 支持 IoTCloud 社区固件的 BRY88AX151K 检测仪，显示 PM2.5、PM10、CO₂、温湿度和 TVOC（ppb），按实际模块显示甲醛；支持指示灯控制、独立传感器有效性、CO₂ 预热提示、历史曲线和 CSV 导出。
-- 当前源码已适配新版 DAIKIN 的 MessagePack 通信、Bearer 登录和 MQTT schema 2 发现，仍兼容旧版 JSON 设备；接入方式见[大金接入说明](docs/daikin.md)。此次适配尚未包含在已发布的 0.2.10 安装包中。
+- 支持新版 DAIKIN 的 MessagePack 通信、Bearer 登录和 MQTT schema 2 发现，仍兼容旧版 JSON 设备；接入方式见[大金接入说明](docs/daikin.md)。
 - S30-V1B 支持单路开关、指示灯、童锁和插口名称双向同步；显示电压、电流、功率与累计用电，沿用电价估算、历史曲线和 CSV 导出。支持局域网 MessagePack 与 OpenIoT / TMCP v2 MQTT，见 [S30 接入说明](docs/s30.md)。
 - 同一设备的局域网与 MQTT 连接按型号和 MAC 合并，接入时核验设备身份。
 - 一个“扫描设备”入口结合 mDNS / DNS-SD 与局域网探测，检查所有可用局域网并过滤容器网桥等虚拟接口；接口枚举受限时尝试路由识别，也可在高级选项手填内网网段或单个 IPv4 地址扫描；支持进度和停止。

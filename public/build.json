@@ -1,8 +1,8 @@
 {
   "framework": "React",
   "sources": {
-    "package.json": "956cd5bc03a95624e6891dd5d4c6fe3b3ad0dc134beef67dd51a3283e2b79045",
-    "package-lock.json": "60ae51f838cd0073c21bed269880946379163765e7bd5411d827dd9db423e3ef",
+    "package.json": "4af8a15979811cee96ee08a2255b022d7074087489f042522433c76d579494d8",
+    "package-lock.json": "2fee087a54fec08638cc20384483fb98128c33d5fba57acbe184ba8d9c7b5d1b",
     "scripts/build-web.mjs": "a45f804debf8d11fd428a408a2d5639a0fa52197c6367516020e5ff831d29b92",
     "frontend/app.jsx": "47e6aa9ba16b5f0f25ae3792293883d7dd2643958b655ded04495f070ad49c43",
     "frontend/automatic-discovery.jsx": "f5bc84469e7848b9f08d02848b575ca35feaffd3efb93753a79af8c0cd500ddf",

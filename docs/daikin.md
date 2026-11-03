@@ -1,6 +1,6 @@
 # 大金社区固件接入
 
-适用于刷入 [IoTCloud 社区固件](https://phicomm-io.github.io/guides/daikin-guide.html)的 BRY88AX151K 检测仪。当前源码已适配新版接口，已发布的 0.2.10 安装包尚不包含此次更新。
+适用于刷入 [IoTCloud 社区固件](https://phicomm-io.github.io/guides/daikin-guide.html)的 BRY88AX151K 检测仪。0.2.11 起适配新版 MessagePack 接口，仍兼容旧版 JSON 设备。
 
 ## 局域网
 
