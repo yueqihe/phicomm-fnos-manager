@@ -19,7 +19,7 @@ module.exports=async function testS30(page,fixtures,output) {
  await page.getByRole('button',{name:'S30-V1B',exact:true}).click();
  const tile=page.locator('.pm-tile').filter({has:page.locator(`[data-open-control="${id}"]`)});
  await tile.locator('[data-power-sparkline]').waitFor();
- assert.equal(await tile.locator('.pm-tile-outlet').count(),1);
+ assert.equal(await tile.locator('.pm-tile-outlet').count(),0,'single-outlet state is already represented by the master switch');
  assert.ok((await tile.locator('.pm-tile-watts').textContent()).startsWith('23.4W'));
  assert.equal(await tile.locator('.pm-tile-energy-reading').textContent(),'1.23度');
  assert.equal(await tile.getByLabel('实时电气指标').textContent(),'电压230.5V电流0.125A');
@@ -35,20 +35,17 @@ module.exports=async function testS30(page,fixtures,output) {
  }
  await tile.locator(`[data-open-control="${id}"]`).click();
  const control=page.getByRole('dialog',{name:'设备控制',exact:true});
- assert.equal(await control.locator('.pm-outlet').count(),1);
+ assert.equal(await control.locator('.pm-outlets,.pm-outlet').count(),0,'single-outlet control must omit the outlet name section');
  assert.equal(await control.getByRole('slider').count(),0);
- await control.getByRole('switch',{name:`${name}插口 1`,exact:true}).click();
- await until(async()=>await control.getByRole('switch',{name:`${name}插口 1`,exact:true}).getAttribute('aria-checked')==='false');
+ assert.equal(await control.locator('[data-action="outlet.set"]').count(),1,'single-outlet control must expose one power switch');
+ await control.getByRole('switch',{name:`${name}总开关`,exact:true}).click();
+ await until(async()=>await control.getByRole('switch',{name:`${name}总开关`,exact:true}).getAttribute('aria-checked')==='false');
  for(const label of ['指示灯','童锁']) {
   const toggle=control.getByRole('switch',{name:`${name}${label}`,exact:true});
   const old=await toggle.getAttribute('aria-checked');await toggle.click();
   await until(async()=>await toggle.getAttribute('aria-checked')!==old);
  }
- await control.getByRole('button',{name:'修改插口 1 名称',exact:true}).click();
- await control.getByLabel('插口 01 名称',{exact:true}).fill('书桌电源');
- await control.getByRole('button',{name:'保存名称',exact:true}).click();
- await control.getByRole('button',{name:'修改插口 1 名称',exact:true}).filter({hasText:'书桌电源'}).waitFor();
- assert.equal(device.state.socket_names[0],'书桌电源');
+ assert.equal(await control.getByRole('button',{name:'修改插口 1 名称',exact:true}).count(),0);
  for(const width of [320,390,768,1440]) {
   await page.setViewportSize({width,height:900});
   assert.equal(await control.evaluate(el=>el.scrollWidth>el.clientWidth),false);
@@ -66,7 +63,8 @@ module.exports=async function testS30(page,fixtures,output) {
  await page.reload();await page.getByRole('button',{name:'S30-V1B',exact:true}).click();
  await tile.getByRole('button',{name:`${name}最近24小时电流历史`,exact:true}).waitFor();
  await page.getByRole('button',{name:'列表',exact:true}).click();
- await page.locator('.pm-detail').getByRole('button',{name:'修改插口 1 名称',exact:true}).filter({hasText:'书桌电源'}).waitFor();
+ assert.equal(await page.locator('.pm-detail [data-action="outlet.set"]').count(),1,'list view must share the single power switch');
+ assert.equal(await page.locator('.pm-detail .pm-outlets,.pm-detail .pm-outlet').count(),0);
  assert.ok((await page.locator('.pm-detail').textContent()).includes('电压230.5V'));
- console.log('S30 UI passed: one outlet, metering, control, name sync, five chart choices, persistence and 320–1440px.');
+ console.log('S30 UI passed: one power switch, metering, compact controls, five chart choices, persistence and 320–1440px.');
 };

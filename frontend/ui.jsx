@@ -1,9 +1,9 @@
 import React, {useId, useLayoutEffect, useRef} from 'react';
-import {Layers2, Settings2, History, X, Plus, List, LayoutGrid, PlugZap, AirVent, Wind, Unplug, ArrowUpRight, Pencil} from 'lucide-react';
+import {Layers2, Settings2, X, Plus, List, LayoutGrid, PlugZap, AirVent, Wind, Unplug, ArrowUpRight, Pencil} from 'lucide-react';
 import {Select} from './select.jsx';
 export {Select};
 
-const icons = {layers: Layers2, settings: Settings2, history: History, x: X, plus: Plus, list: List, grid: LayoutGrid, plug: PlugZap, air: AirVent, wind: Wind, unplug: Unplug, arrow: ArrowUpRight, edit: Pencil};
+const icons = {layers: Layers2, settings: Settings2, x: X, plus: Plus, list: List, grid: LayoutGrid, plug: PlugZap, air: AirVent, wind: Wind, unplug: Unplug, arrow: ArrowUpRight, edit: Pencil};
 export function Icon({name}) { const Component = icons[name]; return <Component size={17} strokeWidth={1.6} aria-hidden="true"/>; }
 export const isMeteredPlug = device => ['TC1','S30-V1B'].includes(device.model);
 export const outletCount = device => device.model === 'S30-V1B' ? 1 : 6;

@@ -87,8 +87,8 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
   for(const width of [320,390,768,1440]) {
    await page.setViewportSize({width,height:width===320?568:900});
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
-   const box=await dialog.evaluate(el=>({overflow:el.scrollWidth>el.clientWidth,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,height:innerHeight,footer:el.querySelector('.pm-dialog-footer').getBoundingClientRect().bottom}));
-   assert.equal(box.overflow,false);assert.ok(box.top>=0&&box.bottom<=box.height+1&&box.footer<=box.height+1,JSON.stringify(box));
+   const box=await dialog.evaluate(el=>({overflow:el.scrollWidth>el.clientWidth,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,height:innerHeight,close:el.querySelector('[data-close]').getBoundingClientRect().bottom}));
+   assert.equal(box.overflow,false);assert.ok(box.top>=0&&box.bottom<=box.height+1&&box.close<=box.height+1,JSON.stringify(box));
   }
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(output,'history-power-mobile.png'),fullPage:true});
   await page.keyboard.press('Escape');await dialog.waitFor({state:'hidden'});
@@ -118,12 +118,12 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
    await dialog.getByRole('button',{name:'关闭历史记录',exact:true}).click();
   }
   // History still works after reload, including dark colors and transient failures.
-  await page.evaluate(()=>localStorage.setItem('pm-theme','dark'));await page.reload();await page.getByRole('button',{name:'历史记录',exact:true}).click();await dialog.locator('[data-telemetry-chart]').waitFor();
+  await page.evaluate(()=>localStorage.setItem('pm-theme','dark'));await page.reload();await tile.getByRole('button',{name:'客厅排插最近24小时功率历史',exact:true}).click();await dialog.locator('[data-telemetry-chart]').waitFor();
   assert.equal(await dialog.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(36, 38, 41)');
   await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:path.join(output,'history-dark-desktop.png'),fullPage:true});
   await dialog.getByRole('button',{name:'关闭历史记录',exact:true}).click();await tile.locator('[data-power-sparkline]').waitFor();
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(output,'card-power-24h-dark.png'),fullPage:true});
-  await page.getByRole('button',{name:'历史记录',exact:true}).click();await dialog.locator('[data-telemetry-chart]').waitFor();
+  await tile.getByRole('button',{name:'客厅排插最近24小时功率历史',exact:true}).click();await dialog.locator('[data-telemetry-chart]').waitFor();
   const unavailable=route=>route.fulfill({status:503,json:{error:'测试：暂时无法读取历史'}});
   await context.route('**/api/devices/*/data-history?range=*',unavailable);
   await dialog.getByRole('button',{name:'最近 7 天',exact:true}).click();await dialog.getByRole('alert').filter({hasText:'测试：暂时无法读取历史'}).waitFor();
