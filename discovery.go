@@ -346,7 +346,7 @@ type discoveryTarget struct {
 func discoveryTargets(interfaces []Adapter, selected, requested, mode string) ([]discoveryTarget, error) {
 	requested = strings.TrimSpace(requested)
 	adapters := interfaces
-	if selected != "" {
+	if selected != "" && (requested == "" || mode == "mdns") {
 		adapters = nil
 		for _, a := range interfaces {
 			if a.ID == selected {
@@ -369,7 +369,7 @@ func discoveryTargets(interfaces []Adapter, selected, requested, mode string) ([
 		}
 	}
 	if len(adapters) == 0 {
-		return nil, failure("未读取到局域网接口，请在高级选项填写扫描网段，或手动添加设备", 422, "invalid_params")
+		return nil, failure("未读取到局域网接口，请在手动指定网段中填写扫描范围，或手动添加设备", 422, "invalid_params")
 	}
 	targets := []discoveryTarget{}
 	seen := map[string]bool{}
@@ -477,16 +477,27 @@ func (d *Discovery) beginLocked(input Obj, background bool) error {
 	if d.closed || d.manager.ctx.Err() != nil {
 		return failure("设备发现服务已停止", 503, "unavailable")
 	}
-	if d.scan != nil && d.scan.state == "scanning" {
+	requested := strings.TrimSpace(str(input["cidr"]))
+	if d.scan != nil && d.scan.state == "scanning" && requested == "" {
 		return nil
 	}
 	mode := str(valueOr(input["mode"], "auto"))
 	if mode != "auto" && mode != "mdns" && mode != "lan" {
 		return bad("发现方式无效")
 	}
+	if requested != "" && mode == "auto" {
+		// A temporary routed range uses HTTP; mDNS broadcasts are local only.
+		mode = "lan"
+	}
 	targets, err := discoveryTargets(d.interfaces(), str(input["interface"]), str(input["cidr"]), mode)
 	if err != nil {
 		return err
+	}
+	if d.scan != nil && d.scan.state == "scanning" {
+		// An explicit range takes priority over an in-flight automatic scan.
+		// Validate first, so a typo cannot interrupt the existing scan.
+		d.scan.cancel()
+		d.scan.state = "cancelled"
 	}
 	ctx, cancel := context.WithCancel(d.manager.ctx)
 	s := &discoveryScan{state: "scanning", phase: mode, mdns: "browsing", mode: mode, devices: map[string]Obj{}, protected: []string{}, ctx: ctx, cancel: cancel}

@@ -220,10 +220,15 @@ func TestDiscoveryTargetsAcrossAdaptersAndManualRouting(t *testing.T) {
 			t.Fatal("accepted invalid manual subnet", invalid)
 		}
 	}
-	if _, err := discoveryTargets(adapters, "first", "192.168.2.0/24", "auto"); err == nil {
-		t.Fatal("explicit interface accepted a different subnet")
+	targets, err = discoveryTargets(adapters, "first", "192.168.2.0/24", "auto")
+	if err != nil || len(targets) != 1 || targets[0].adapter.ID != "second" {
+		t.Fatal("manual subnet was blocked by a previously selected adapter", targets, err)
 	}
-	if _, err := discoveryTargets(adapters, "removed", "10.0.0.0/24", "auto"); err == nil {
+	targets, err = discoveryTargets(adapters, "removed", "172.20.3.0/24", "auto")
+	if err != nil || len(targets) != 1 || targets[0].adapter.Address != "" {
+		t.Fatal("manual routed subnet was blocked by an unavailable adapter", targets, err)
+	}
+	if _, err := discoveryTargets(adapters, "removed", "", "auto"); err == nil {
 		t.Fatal("stale interface accepted")
 	}
 	if _, err := discoveryTargets(nil, "", "", "auto"); err == nil {
@@ -245,7 +250,7 @@ func TestDiscoveryWhenInterfacesAreMissingOrDeviceIsOnSecondAdapter(t *testing.T
 		t.Fatal(err)
 	}
 	waitUntil(t, func() bool { return d.snapshot()["state"] == "complete" })
-	if snapshot := d.snapshot(); snapshot["checked"] != 1 || len(snapshot["devices"].([]Obj)) != 1 || snapshot["mdns"] != "unavailable" {
+	if snapshot := d.snapshot(); snapshot["checked"] != 1 || len(snapshot["devices"].([]Obj)) != 1 || snapshot["mdns"] != "skipped" {
 		t.Fatal("manual discovery depended on interface enumeration or mDNS", snapshot)
 	}
 	d.interfaces = func() []Adapter {
@@ -260,5 +265,60 @@ func TestDiscoveryWhenInterfacesAreMissingOrDeviceIsOnSecondAdapter(t *testing.T
 	waitUntil(t, func() bool { return d.snapshot()["state"] == "complete" })
 	if snapshot := d.snapshot(); snapshot["total"] != 1 || snapshot["checked"] != 1 || len(snapshot["devices"].([]Obj)) != 1 {
 		t.Fatal("device on second adapter was missed", snapshot)
+	}
+}
+
+func TestTemporarySubnetReplacesAutomaticScanWithoutPersisting(t *testing.T) {
+	_, app, _ := testManager(t)
+	d := app.discovery
+	d.interfaces = func() []Adapter { return []Adapter{{ID: "lan", Address: "10.0.0.9", CIDR: "10.0.0.9/24"}} }
+	browsing := make(chan struct{})
+	d.browse = func(ctx context.Context, _ Adapter) ([]string, string) {
+		close(browsing)
+		<-ctx.Done()
+		return nil, "unavailable"
+	}
+	probed := make(chan string, 1024)
+	d.probe = func(_ context.Context, host, local string, _ int) bool { probed <- host + "/" + local; return false }
+	if _, err := d.automatic(token(), "start"); err != nil {
+		t.Fatal(err)
+	}
+	<-browsing
+	d.mu.Lock()
+	original := d.scan
+	d.mu.Unlock()
+	if _, err := d.start(Obj{"cidr": "8.8.8.8"}); err == nil {
+		t.Fatal("public target accepted")
+	}
+	if original.ctx.Err() != nil {
+		t.Fatal("invalid range interrupted automatic discovery")
+	}
+	if _, err := d.start(Obj{"interface": "lan", "cidr": "192.168.50.20"}); err != nil {
+		t.Fatal(err)
+	}
+	d.wg.Wait()
+	snapshot := d.snapshot()
+	if original.ctx.Err() == nil || snapshot["range"] != "192.168.50.20/32" || snapshot["mode"] != "lan" || snapshot["mdns"] != "skipped" || snapshot["checked"] != 1 {
+		t.Fatal("explicit remote subnet was not used", snapshot)
+	}
+	found := false
+	for len(probed) > 0 {
+		if <-probed == "192.168.50.20/" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("remote scan bound the wrong source interface")
+	}
+	d.browse = func(context.Context, Adapter) ([]string, string) { return nil, "complete" }
+	d.mu.Lock()
+	d.nextAutomatic = time.Time{}
+	d.mu.Unlock()
+	if _, err := d.automatic(token(), "start"); err != nil {
+		t.Fatal(err)
+	}
+	d.wg.Wait()
+	if snapshot = d.snapshot(); snapshot["range"] != "10.0.0.0/24" || snapshot["mode"] != "auto" {
+		t.Fatal("temporary range leaked into automatic discovery", snapshot)
 	}
 }

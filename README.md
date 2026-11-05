@@ -20,19 +20,19 @@
 
 需要 fnOS 1.2.0 及以上，以及刷入兼容社区固件的 TC1 / M1 / A1 / DAIKIN / S30-V1B。[查看最新版本](https://github.com/yueqihe/phicomm-fnos-manager/releases/latest)。
 
-当前发布版本为 **0.2.12**，优化历史查询与完整 CSV 导出，新增曲线缓存和小时汇总；升级沿用原应用和数据。下载对应架构的安装包；自行构建请参阅下方“开发与构建”。
+当前发布版本为 **0.2.13**，新增“关于”与 GitHub 更新检测，支持在添加设备时临时扫描其他内网网段；升级沿用原应用和数据。下载对应架构的安装包；自行构建请参阅下方“开发与构建”。
 
-| NAS 架构 | 安装包（0.2.12） |
+| NAS 架构 | 安装包（0.2.13） |
 | --- | --- |
-| ARM64 / AArch64 | [phicomm-manager-0.2.12-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.12/phicomm-manager-0.2.12-arm.fpk) |
-| x86-64 / AMD64 | [phicomm-manager-0.2.12-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.12/phicomm-manager-0.2.12-x86.fpk) |
+| ARM64 / AArch64 | [phicomm-manager-0.2.13-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.13/phicomm-manager-0.2.13-arm.fpk) |
+| x86-64 / AMD64 | [phicomm-manager-0.2.13-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.13/phicomm-manager-0.2.13-x86.fpk) |
 
 1. 在飞牛应用中心选择手动安装，上传对应架构的 FPK。
 2. 使用飞牛管理员账号，从桌面打开“IoT 设备管理”，无需再设置应用管理密码。
 3. 点击列表或空间视图下方的“添加设备”，扫描设备或填写设备内网地址。
 4. 在“设置”中调整设备连接、MQTT 服务和电价；“外观”可选择浅色、深色或跟随系统，即时生效并记住此设备的偏好。
 
-从 0.1.x 或 0.2.0–0.2.11 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
+从 0.1.x 或 0.2.0–0.2.12 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
 
 ## 通过 fnOS 远程控制
 
@@ -51,7 +51,7 @@
 - 支持新版 DAIKIN 的 MessagePack 通信、Bearer 登录和 MQTT schema 2 发现，仍兼容旧版 JSON 设备；接入方式见[大金接入说明](docs/daikin.md)。
 - S30-V1B 支持单路开关、指示灯、童锁和插口名称双向同步；显示电压、电流、功率与累计用电，沿用电价估算、历史曲线和 CSV 导出。支持局域网 MessagePack 与 OpenIoT / TMCP v2 MQTT，见 [S30 接入说明](docs/s30.md)。
 - 同一设备的局域网与 MQTT 连接按型号和 MAC 合并，接入时核验设备身份。
-- 一个“扫描设备”入口结合 mDNS / DNS-SD 与局域网探测，检查所有可用局域网并过滤容器网桥等虚拟接口；接口枚举受限时尝试路由识别，也可在高级选项手填内网网段或单个 IPv4 地址扫描；支持进度和停止。
+- 一个“扫描设备”入口结合 mDNS / DNS-SD 与局域网探测，检查所有可用局域网并过滤容器网桥等虚拟接口；接口枚举受限时尝试路由识别，也可在“手动指定网段”中填写其他可路由内网网段或单个 IPv4 地址扫描；支持进度和停止。
 - 内置 MQTT Broker，也可连接外部 Broker；支持 TMCP v2 自动发现、设备凭据和主题权限，外部连接可使用 TLS。
 - 设备连接、服务设置、控制和历史通过弹窗操作。
 - 浅色 / 深色 / 跟随系统主题，覆盖设备列表、空间卡片、控制和设置弹窗。
@@ -65,6 +65,11 @@
 - 历史弹窗可切换“历史数据”和“活动记录”；按设备查看功率、用电、预估花费、空气指标或风机 / 滤芯趋势，支持 24 小时 / 7 天 / 30 天筛选及 CSV 导出。
 - “设置 → 数据导出”可下载所有设备已保存的完整历史读数为 CSV，一条记录一行，不受图表范围或汇总粒度限制，包含设备、空间、北京时间和各项原始读数。
 - SQLite 本地保存数据，连接凭据使用 AES-256-GCM 加密，沿用旧版 `secrets.key`。
+- “设置 → 关于”：查看当前版本、架构、作者与项目地址；打开时检查 GitHub 最新正式版，也可手动检查。有新版时显示更新说明，并提供匹配 ARM64 / x86-64 的 FPK 下载入口，下载后通过飞牛应用中心升级。
+
+“添加设备 → 手动指定网段”支持 NAS 能访问的其他内网网段或单个 IPv4 地址，例如 `192.168.50.0/24`、`192.168.50.20`。填写后重新选择合适路由，不受此前所选网卡网段限制；正在自动扫描时也可输入范围并开始本次扫描。每次最多 1024 个地址（/22 至 /32），关闭添加弹窗后清空，不加入每分钟自动发现范围。跨网段需网络路由与防火墙允许 NAS 访问设备。
+
+更新检测由 NAS 请求本项目 GitHub Releases，不上传设备、网络配置或历史读数。API 限流时尝试从 GitHub 最新 Release 页面确认版本，更新说明可在发布页面查看。自动检查结果缓存 15 分钟，手动检查最短间隔一分钟；连接失败会明确提示并允许重试。仅在打开“关于”或点击检查时请求，不在后台定时检查，不自动安装更新。
 
 状态自动更新：局域网设备默认每 15 秒采集一次，MQTT 状态随设备上报更新；页面默认每 5 秒同步最新数据，切回前台或网络恢复时立即同步。“设置 → 刷新设置”可配置页面刷新间隔（2–300 秒）和局域网采集间隔（5–60 秒），保存后立即生效，同步到其他浏览器并在重启后保留。历史仍按分钟记录。
 
@@ -106,6 +111,7 @@ npm run build:web
 npm run test:browser
 npm run test:history
 npm run test:discovery
+npm run test:about
 ```
 
 浏览器测试需要先运行 `npx playwright install chromium`，或通过 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` 指定已安装的 Chromium。打包前会检查源码与静态产物的 SHA256，避免将旧网页打入新包。

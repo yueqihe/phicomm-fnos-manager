@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const version = "0.2.12"
+const version = "0.2.13"
 
 //go:embed public/index.html public/app.js public/styles.css
 var frontend embed.FS
@@ -44,6 +44,7 @@ type App struct {
 	dev       bool
 	csrfOnce  sync.Once
 	csrfKey   [32]byte
+	updates   updateChecker
 }
 
 func (a *App) requestToken(r *http.Request) string {
@@ -199,6 +200,15 @@ func (a *App) handle(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		}
 	}
 	switch path {
+	case "/api/about":
+		if r.Method == "GET" {
+			return 200, applicationAbout(), nil
+		}
+	case "/api/updates":
+		if r.Method == "GET" || r.Method == "POST" {
+			result, err := a.updates.check(r.Context(), r.Method == "POST")
+			return 200, result, err
+		}
 	case "/api/devices":
 		if r.Method == "GET" {
 			settings := a.manager.settings()
