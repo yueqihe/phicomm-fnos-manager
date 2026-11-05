@@ -20,19 +20,19 @@
 
 需要 fnOS 1.2.0 及以上，以及刷入兼容社区固件的 TC1 / M1 / A1 / DAIKIN / S30-V1B。[查看最新版本](https://github.com/yueqihe/phicomm-fnos-manager/releases/latest)。
 
-当前发布版本为 **0.2.11**，应用更名为 **IoT 设备管理**，新增 S30-V1B 支持并适配大金新版接口；升级沿用原应用和数据。下载对应架构的安装包；自行构建请参阅下方“开发与构建”。
+当前发布版本为 **0.2.12**，优化历史查询与完整 CSV 导出，新增曲线缓存和小时汇总；升级沿用原应用和数据。下载对应架构的安装包；自行构建请参阅下方“开发与构建”。
 
-| NAS 架构 | 安装包（0.2.11） |
+| NAS 架构 | 安装包（0.2.12） |
 | --- | --- |
-| ARM64 / AArch64 | [phicomm-manager-0.2.11-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.11/phicomm-manager-0.2.11-arm.fpk) |
-| x86-64 / AMD64 | [phicomm-manager-0.2.11-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.11/phicomm-manager-0.2.11-x86.fpk) |
+| ARM64 / AArch64 | [phicomm-manager-0.2.12-arm.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.12/phicomm-manager-0.2.12-arm.fpk) |
+| x86-64 / AMD64 | [phicomm-manager-0.2.12-x86.fpk](https://github.com/yueqihe/phicomm-fnos-manager/releases/download/v0.2.12/phicomm-manager-0.2.12-x86.fpk) |
 
 1. 在飞牛应用中心选择手动安装，上传对应架构的 FPK。
 2. 使用飞牛管理员账号，从桌面打开“IoT 设备管理”，无需再设置应用管理密码。
 3. 点击列表或空间视图下方的“添加设备”，扫描设备或填写设备内网地址。
 4. 在“设置”中调整设备连接、MQTT 服务和电价；“外观”可选择浅色、深色或跟随系统，即时生效并记住此设备的偏好。
 
-从 0.1.x 或 0.2.0–0.2.10 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
+从 0.1.x 或 0.2.0–0.2.11 升级时保留应用数据，即可继续使用原设备、空间、连接凭据、历史和电费记录。详细操作与备份方式见 [安装说明](fnos/INSTALL.md)。
 
 ## 通过 fnOS 远程控制
 
@@ -78,7 +78,7 @@
 
 历史数据从启用本功能后的成功采集开始记录，每个设备每分钟保存一份到现有 SQLite，保留最近 30 天，重启后继续使用；局域网和 MQTT 共用记录。离线或无效采样留空，不回填旧数据。TC1 / S30-V1B 的功率和电量来自实际计量接口，设备没有上报的指标显示为空。
 
-当前源码将历史查询、完整 CSV 导出与数据库写入分开，曲线结果最多缓存一分钟；新记录、修正或过期清理会使相关缓存失效。7 天 / 30 天查询按需建立并复用小时汇总，首尾不足一小时的部分继续读取原始记录。原始分钟数据与完整 CSV 保留原精度，详情见[历史性能与验证](docs/history-performance.md)。
+0.2.12 起将历史查询、完整 CSV 导出与数据库写入分开，曲线结果最多缓存一分钟；新记录、修正或过期清理会使相关缓存失效。7 天 / 30 天查询按需建立并复用小时汇总，首尾不足一小时的部分继续读取原始记录。原始分钟数据与完整 CSV 保留原精度，详情见[历史性能与验证](docs/history-performance.md)。
 
 点击顶部历史图标，或设备卡片 / 控制区的小曲线进入。24 小时按 5 分钟展示，7 天按小时、30 天按 3 小时汇总；功率等指标取区间均值，用电和花费取区间合计。用电与花费按所选时段内有效读数的差额统计，计量归零后建立新起点，花费沿用采集时的计费记录。导出的 CSV 与当前范围和汇总粒度一致，时间为北京时间。
 
