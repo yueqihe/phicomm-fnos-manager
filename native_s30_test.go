@@ -22,13 +22,13 @@ func TestS30SingleOutletAndIndependentMeterValidity(t *testing.T) {
 	meter["active_power"], meter["current"] = 0.0, 0.0
 	for _, fields := range []float64{7, 1, 4, 0} {
 		meter["valid_fields"] = fields
-		s := normalize("S30-V1B", f.state, nil)
+		s := normalize("S30-V1B", f.state, nil, nil)
 		if (s["voltage"] != nil) != (int(fields)&1 != 0) || (s["current"] != nil) != (int(fields)&2 != 0) || (s["power"] != nil) != (int(fields)&4 != 0) || s["energy"] != 1.23 || len(arr(s["outlets"])) != 1 {
 			t.Fatal("independent metering validity or outlet count", fields, s)
 		}
 	}
 	meter["valid_fields"] = nil
-	if s := normalize("S30-V1B", f.state, nil); s["power"] != nil || s["voltage"] != nil {
+	if s := normalize("S30-V1B", f.state, nil, nil); s["power"] != nil || s["voltage"] != nil {
 		t.Fatal("invalid mask accepted", s)
 	}
 	for _, index := range []float64{-1, 1, 5, 0.5} {
@@ -158,6 +158,10 @@ func TestS30MQTTOpenIoTDiscoveryAndState(t *testing.T) {
 	publishTest(t, c, topic+"/availability", "online", true)
 	waitUntil(t, func() bool { return boolean(m.list()[0]["online"]) })
 	id := "s30-v1b-aabbcc000703"
+	boot, err := m.control(context.Background(), id, "config.set", Obj{"section": "device", "values": Obj{"power_on_mode": "restore"}})
+	if err != nil || !boolean(boot["confirmed"]) || obj(obj(boot["device"])["state"])["powerOnMode"] != "restore" {
+		t.Fatal("MQTT power policy was not confirmed", boot, err)
+	}
 	result, err := m.control(context.Background(), id, "outlet.set", Obj{"index": 0.0, "on": true})
 	if err != nil || !boolean(result["confirmed"]) {
 		t.Fatal(result, err)
@@ -175,7 +179,7 @@ func TestS30MQTTOpenIoTDiscoveryAndState(t *testing.T) {
 	}
 	m.onPacket("s30-v1b/aabbcc000703/state", raw, false)
 	s := obj(m.list()[0]["state"])
-	if s["voltage"] != 225.0 || s["power"] != 0.0 || s["current"] != nil {
+	if s["voltage"] != 225.0 || s["power"] != 0.0 || s["current"] != nil || s["powerOnMode"] != "restore" || len(stringsOf(s["powerOnModes"])) != 3 {
 		t.Fatal(s)
 	}
 	d, err := m.add(context.Background(), Obj{"model": "S30-V1B", "address": f.server.URL, "method": "hybrid"})

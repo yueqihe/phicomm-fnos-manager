@@ -45,10 +45,49 @@ module.exports=async function testS30(page,fixtures,output) {
   const old=await toggle.getAttribute('aria-checked');await toggle.click();
   await until(async()=>await toggle.getAttribute('aria-checked')!==old);
  }
+ const policy=control.getByRole('combobox',{name:'上电输出',exact:true}),policyArea=control.locator('.pm-power-on'),savePolicy=policyArea.getByRole('button',{name:'保存',exact:true});
+ await policy.waitFor();assert.equal(await policy.getAttribute('data-value'),'off');
+ assert.equal(await optionCount(policy),3);
+ const currentOutput=device.state.socket_states[0];
+ for(const mode of ['restore','on','off']) {
+  const before=device.calls.filter(c=>c.action==='config.set'&&c.params.section==='device').length;
+  await chooseOption(policy,mode);
+  assert.equal(device.calls.filter(c=>c.action==='config.set'&&c.params.section==='device').length,before,'choosing a policy must wait for Save');
+  await savePolicy.click();
+  await until(async()=>device.state.power_on_mode===mode && await savePolicy.isDisabled());
+  assert.equal(device.state.socket_states[0],currentOutput,'policy save must not toggle the current outlet');
+ }
+ // Preserve a chosen value when a write fails, while polling still reports the old one.
+ const writeURL=`**/api/devices/${id}/control`;
+ await page.route(writeURL,r=>r.fulfill({status:502,json:{error:'测试：上电策略保存失败'}}));
+ await chooseOption(policy,'restore');await savePolicy.click();
+ await until(async()=>await savePolicy.isEnabled());
+ assert.equal(await policy.getAttribute('data-value'),'restore');
+ assert.equal(device.state.power_on_mode,'off');
+ await page.unroute(writeURL);await savePolicy.click();
+ await until(async()=>device.state.power_on_mode==='restore' && await savePolicy.isDisabled());
+ device.state.power_on_mode='on';device.state.power_on=true;
+ const refreshDevice=()=>page.evaluate(async id=>{
+  const session=await (await fetch('./api/session')).json();
+  const response=await fetch(`./api/devices/${id}/refresh`,{method:'POST',headers:{'X-Manager-CSRF':session.csrfToken,'Content-Type':'application/json'},body:'{}'});
+  if(!response.ok) throw new Error(`fixture refresh failed: ${await response.text()}`);
+ },id);
+ await refreshDevice();
+ await until(async()=>await policy.getAttribute('data-value')==='on');
+ // Older firmware exposes only a boolean and must not offer the restore mode.
+ delete device.state.power_on_mode;delete device.capabilities.power_on_modes;
+ await refreshDevice();
+ await until(async()=>await optionCount(policy)===2);
+ await chooseOption(policy,'off');await savePolicy.click();
+ await until(async()=>device.state.power_on===false && await savePolicy.isDisabled());
+ assert.equal(device.calls.filter(c=>c.action==='config.set'&&c.params.section==='device').at(-1).params.values.power_on,false);
  assert.equal(await control.getByRole('button',{name:'修改插口 1 名称',exact:true}).count(),0);
  for(const width of [320,390,768,1440]) {
   await page.setViewportSize({width,height:900});
   assert.equal(await control.evaluate(el=>el.scrollWidth>el.clientWidth),false);
+  const bounds=await policyArea.boundingBox();
+  assert.ok(bounds.x>=0 && bounds.x+bounds.width<=width,'power-on controls fit the viewport');
+  if(width===390) await page.screenshot({path:path.join(output,'s30-power-on-mobile.png'),fullPage:true});
  }
  await control.getByRole('button',{name:`${name}最近24小时功率历史`,exact:true}).click();
  const history=page.getByRole('dialog',{name:'历史记录',exact:true});
@@ -66,5 +105,5 @@ module.exports=async function testS30(page,fixtures,output) {
  assert.equal(await page.locator('.pm-detail [data-action="outlet.set"]').count(),1,'list view must share the single power switch');
  assert.equal(await page.locator('.pm-detail .pm-outlets,.pm-detail .pm-outlet').count(),0);
  assert.ok((await page.locator('.pm-detail').textContent()).includes('电压230.5V'));
- console.log('S30 UI passed: one power switch, metering, compact controls, five chart choices, persistence and 320–1440px.');
+ console.log('S30 UI passed: one power switch, metering, power-on policies, failed drafts, device-side sync, legacy firmware, five chart choices, persistence and 320–1440px.');
 };

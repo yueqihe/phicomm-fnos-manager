@@ -10,6 +10,7 @@ export const outletCount = device => device.model === 'S30-V1B' ? 1 : 6;
 export const isAirMonitor = device => ['M1','DAIKIN'].includes(device.model);
 export function DeviceIcon({device}) { return <Icon name={isMeteredPlug(device) ? 'plug' : isAirMonitor(device) ? 'air' : 'wind'}/>; }
 export function Dot({online}) { return <span className={`pm-dot${online ? '' : ' pm-dot-off'}`}/>; }
+export function UpdateDot() { return <span className="pm-update-dot" aria-hidden="true"/>; }
 export function Status({device}) { return <span className="pm-status"><Dot online={device.online}/>{device.online ? '在线' : '离线'}</span>; }
 export const metric = (value, digits) => typeof value === 'number' && Number.isFinite(value) ? digits === undefined ? String(value) : value.toFixed(digits) : '—';
 export const when = value => value ? new Date(value).toLocaleString('zh-CN', {hour12: false}) : '尚未连接';

@@ -20,24 +20,24 @@ func TestDAIKINSensorValidityAndOptionalModules(t *testing.T) {
 	sensors["pm10"] = Obj{"valid": true, "value": 25.0, "age_ms": 20001.0}
 	sensors["co2"] = Obj{"valid": false, "value": 550.0, "age_ms": 1000.0}
 	f.state["co2_warmup_seconds_remaining"] = 120.0
-	n := normalize("DAIKIN", f.state, nil)
+	n := normalize("DAIKIN", f.state, nil, nil)
 	if !boolean(n["sensorValid"]) || n["pm25"] != 0.0 || n["tvoc"] != 0.0 || n["temp"] != 24.5 || n["pm10"] != nil || n["co2"] != nil || n["hcho"] != nil || boolean(n["hchoPresent"]) || !boolean(n["pm10Present"]) || n["co2Warmup"] != 120.0 {
 		t.Fatal("independent validity, zero or optional sensor incorrect", n)
 	}
 	f.state["formaldehyde_present"] = true
 	sensors["formaldehyde"] = Obj{"valid": false, "value": 0.123}
-	if n = normalize("DAIKIN", f.state, nil); !boolean(n["hchoPresent"]) || n["hcho"] != nil {
+	if n = normalize("DAIKIN", f.state, nil, nil); !boolean(n["hchoPresent"]) || n["hcho"] != nil {
 		t.Fatal("lost detected but invalid module", n)
 	}
 	sensors["formaldehyde"] = Obj{"valid": true, "value": 0.012, "age_ms": 500.0}
 	sensors["pm25"] = Obj{"valid": false, "value": 99.0}
-	n = normalize("DAIKIN", f.state, nil)
+	n = normalize("DAIKIN", f.state, nil, nil)
 	if n["hcho"] != 0.012 || boolean(n["sensorValid"]) || n["pm25"] != nil || n["humidity"] != 51.0 {
 		t.Fatal("one invalid sensor hid other measurements", n)
 	}
 	for _, age := range []any{nil, -1.0, "100"} {
 		sensors["tvoc"] = Obj{"valid": true, "value": 22.0, "age_ms": age}
-		if normalize("DAIKIN", f.state, nil)["tvoc"] != nil {
+		if normalize("DAIKIN", f.state, nil, nil)["tvoc"] != nil {
 			t.Fatal("invalid data age accepted", age)
 		}
 	}

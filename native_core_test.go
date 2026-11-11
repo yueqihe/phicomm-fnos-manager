@@ -20,6 +20,7 @@ type testFirmware struct {
 	mu           sync.Mutex
 	state, power Obj
 	actions      []string
+	bootModes    []string
 	calls        []string
 	password     string
 	legacy, drop bool
@@ -32,6 +33,9 @@ func firmwareFixture(t *testing.T, model, mac string) *testFirmware {
 	f.actions = []string{"status.get", "capabilities.get", "config.set"}
 	switch model {
 	case "S30-V1B":
+		f.state["power_on_mode"] = "off"
+		f.state["power_on"] = false
+		f.bootModes = []string{"off", "on", "restore"}
 		f.state["socket_states"] = []any{false}
 		f.state["socket_names"] = []string{"桌面插座"}
 		f.state["metering"] = Obj{"valid": true, "valid_fields": 7.0, "voltage": 230.5, "current": 0.125, "active_power": 23.4, "energy_kwh": 1.23}
@@ -139,6 +143,9 @@ func (f *testFirmware) command(request Obj) Obj {
 		if _, ok := f.state["model"]; ok {
 			data.(Obj)["model"] = f.state["model"]
 		}
+		if len(f.bootModes) > 0 {
+			data.(Obj)["power_on_modes"] = f.bootModes
+		}
 	case "power.get":
 		data = f.power
 	case "outlet.set":
@@ -178,6 +185,14 @@ func (f *testFirmware) command(request Obj) Obj {
 	case "child_lock.set":
 		f.state["child_lock"] = p["enabled"]
 	case "config.set":
+		if p["section"] == "device" {
+			values := obj(p["values"])
+			mode := requestedPowerOnMode(values)
+			f.state["power_on"] = mode == "on"
+			if values["power_on_mode"] != nil {
+				f.state["power_on_mode"] = mode
+			}
+		}
 		if p["section"] == "socket" {
 			values := obj(p["values"])
 			names := arr(f.state["socket_names"])

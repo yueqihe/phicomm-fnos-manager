@@ -23,10 +23,14 @@
 #manager .pm-top-actions{display:flex;align-items:center;gap:6px}
 #manager .pm-utility{display:grid;place-items:center;width:34px;min-height:34px;padding:0;border-radius:4px;flex-shrink:0}
 #manager .pm-utility:hover{background:var(--pm-bg);color:var(--pm-ink)}
+#manager .pm-update-dot{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--pm-accent);pointer-events:none}
+#manager .pm-tab-label{position:relative;display:inline-block}
+#manager .pm-tab-label .pm-update-dot{top:0;right:-8px}
 #manager .pm-content{padding:28px}
 #manager h1,#manager h2,#manager h3,#manager p{margin:0}
 #manager .pm-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;border:1px solid var(--pm-line);border-radius:4px;background:var(--pm-paper);color:var(--pm-ink);padding:7px 12px;white-space:nowrap;transition:background .15s}
 #manager .pm-btn:hover{background:var(--pm-bg)}
+#manager .pm-btn-danger{color:var(--pm-accent);border-color:var(--pm-accent)}
 #manager .pm-btn-primary{background:var(--pm-primary);border-color:var(--pm-primary);color:#fff}
 #manager .pm-btn-primary:hover{background:var(--pm-primary);filter:brightness(.94)}
 #manager .pm-device-toolbar{display:flex;align-items:center;gap:12px;min-width:0}
@@ -61,7 +65,6 @@
   #manager .pm-workspace .pm-outlet{padding:6px 0}
   #manager .pm-workspace .pm-outlet-label{display:flex;align-items:center;gap:6px}
   #manager .pm-workspace .pm-outlet-id{order:-1;margin-top:0}
-  #manager .pm-workspace .pm-detail-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:19px}
   #manager .pm-workspace .pm-info-row{padding:9px 0}
   #manager .pm-workspace .pm-range-label{margin-top:12px}
   #manager .pm-workspace .pm-modes{margin:8px 0}
@@ -151,9 +154,18 @@
 #manager .pm-modes{display:flex;gap:7px;margin:11px 0 20px}
 #manager .pm-mode{flex:1;padding:8px;border:1px solid var(--pm-line);border-radius:3px;background:var(--pm-paper);color:var(--pm-muted);font-size:11px}
 #manager .pm-mode[aria-pressed="true"]{color:var(--pm-accent);border-color:var(--pm-selected-line);background:var(--pm-tint)}
+#manager .pm-detail-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px}
+#manager .pm-detail-options>.pm-info-row{gap:8px;min-width:0}
 #manager .pm-info-row{padding:12px 0;border-bottom:1px solid var(--pm-line);display:flex;align-items:center;justify-content:space-between;font-size:11px}
 #manager .pm-info-row span{color:var(--pm-muted)}
 #manager .pm-info-row strong{font-weight:500}
+#manager .pm-power-on{grid-column:1 / -1;min-width:0}
+#manager .pm-power-on .pm-info-row{gap:12px;border-bottom:0}
+#manager .pm-power-on label{color:var(--pm-muted);flex-shrink:0}
+#manager .pm-power-on-actions{display:flex;align-items:center;gap:8px;min-width:0}
+#manager .pm-power-on-actions .pm-select{width:160px;max-width:100%;min-width:0}
+#manager .pm-power-on-actions .pm-select-trigger{font-size:12px;min-height:36px;padding-top:7px;padding-bottom:7px}
+#manager .pm-power-on-actions .pm-btn{font-size:12px;flex-shrink:0}
 #manager .pm-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;padding-top:20px;color:var(--pm-muted);font-size:10px}
 #manager .pm-bottom span{display:flex;align-items:center;gap:6px}
 #manager .pm-bottom svg{width:12px;height:12px}
@@ -468,13 +480,21 @@ html,body{margin:0;min-height:100%;background:var(--pm-bg)}
 #manager .pm-login-card{width:100%;max-width:360px;padding:32px}
 #manager .pm-login-card h1{font-size:22px;margin:20px 0 28px}
 #manager .pm-login-card .pm-btn{width:100%;margin-top:8px}
-#manager .pm-remove-area{border-top:1px solid var(--pm-line);margin-top:24px;padding-top:16px}
-#manager .is-danger{color:var(--pm-accent)}
 #manager details{margin:18px 0}
 #manager summary{cursor:pointer;font-size:12px;margin-bottom:18px}
 #manager .pm-device-name,#manager .pm-detail-name,#manager .pm-tile-name{overflow-wrap:anywhere}
 #manager .pm-tile-value .pm-reading-caption{display:block;font-size:11px;letter-spacing:0}
 #manager .pm-config-section .pm-btn{margin-top:12px}
+#manager .pm-device-network{margin-top:24px;padding-top:20px;border-top:1px solid var(--pm-line)}
+#manager .pm-device-network-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#manager .pm-device-network-heading h3{font-size:12px;font-weight:550}
+#manager .pm-device-network-heading>span{font-size:11px;color:var(--pm-muted)}
+#manager .pm-device-network dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 24px;margin:16px 0 20px}
+#manager .pm-device-network dl>div{min-width:0}
+#manager .pm-device-network dt{font-size:11px;color:var(--pm-muted);margin-bottom:4px}
+#manager .pm-device-network dd{font-size:12px;margin:0;overflow-wrap:anywhere;white-space:pre-wrap}
+#manager .pm-device-settings-link{color:var(--pm-ink);text-decoration:none}
+#manager .pm-device-network .pm-help{margin-top:10px}
 #manager .pm-about h3{font-size:20px;font-weight:550}
 #manager .pm-about-description{font-size:13px;color:var(--pm-muted);margin-top:6px}
 #manager .pm-about-info{margin:22px 0 8px;display:grid;gap:12px}

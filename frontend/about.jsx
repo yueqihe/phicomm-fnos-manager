@@ -1,24 +1,25 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {api, json, when} from './ui.jsx';
+import {api, when} from './ui.jsx';
 
 const ExternalLink = ({href,children,className=''}) => <a className={className} href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
 
-export function AboutPanel() {
-  const [about,setAbout]=useState(null), [update,setUpdate]=useState(null), [error,setError]=useState(''), [checking,setChecking]=useState(true);
+export function AboutPanel({updateCheck}) {
+  const [about,setAbout]=useState(null), [infoError,setInfoError]=useState(''), [loading,setLoading]=useState(true);
+  const {update,check:checkUpdates}=updateCheck;
+  const error=infoError || updateCheck.error, checking=loading || updateCheck.checking;
   const abort=useRef(), lock=useRef(false);
   async function check(force=false,signal=abort.current?.signal) {
     if(lock.current || signal?.aborted) return;
-    lock.current=true;setChecking(true);setError('');
+    lock.current=true;setLoading(true);setInfoError('');
     try {
       if(!about) {
         const info=await api('about',{signal});
         if(signal?.aborted) return;
         setAbout(info);
       }
-      const result=await api('updates',{...(force ? json('POST',{}) : {}),signal});
-      if(!signal?.aborted) setUpdate(result);
-    } catch(e) {if(!signal?.aborted) setError(e.message);}
-    finally {lock.current=false;if(!signal?.aborted) setChecking(false);}
+      if(!signal?.aborted) await checkUpdates(force);
+    } catch(e) {if(!signal?.aborted) setInfoError(e.message);}
+    finally {lock.current=false;if(!signal?.aborted) setLoading(false);}
   }
   useEffect(() => {
     const controller=new AbortController();abort.current=controller;
@@ -44,7 +45,7 @@ export function AboutPanel() {
         <ExternalLink href={update?.releaseUrl || 'https://github.com/yueqihe/phicomm-fnos-manager/releases'}>查看 GitHub 发布页面</ExternalLink>
       </div>
       {available && <p className="pm-help">{update.downloadUrl ? '下载后在飞牛应用中心手动升级，保留应用数据。' : '此版本暂无匹配当前架构的安装包，可在发布页面查看。'}</p>}
-      <p className="pm-about-meta">打开关于时自动检查，结果缓存 15 分钟。</p>
+      <p className="pm-about-meta">打开应用时自动检查，结果缓存 15 分钟。</p>
       {available && update.notes && <details className="pm-release-notes" open><summary>更新说明</summary><div>{update.notes}</div></details>}
       {available && !update.notes && <p className="pm-about-meta">更新说明请查看 GitHub 发布页面。</p>}
     </section>

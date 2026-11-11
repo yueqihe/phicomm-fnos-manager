@@ -1,16 +1,18 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {createRoot} from 'react-dom/client';
-import {api, json, Icon, Message, Modal} from './ui.jsx';
+import {api, json, Icon, Message, Modal, UpdateDot} from './ui.jsx';
 import {DeviceToolbar, DeviceWorkspace, Detail} from './devices.jsx';
 import {AddDialog, SettingsDialog, HistoryDialog} from './dialogs.jsx';
 import {useTheme} from './theme.js';
 import {useDefaultLayout} from './layout.js';
 import {NewDevicesNotice, useAutomaticDiscovery} from './automatic-discovery.jsx';
+import {useUpdateCheck} from './updates.js';
 
 function App() {
   const [theme,setTheme]=useTheme();
   const [defaultLayout,setDefaultLayout]=useDefaultLayout();
   const [session,setSession]=useState('loading'), [devices,setDevices]=useState([]), [settings,setSettings]=useState(null), [selected,setSelected]=useState(''), [layout,setLayout]=useState(defaultLayout), [filter,setFilter]=useState('all'), [loading,setLoading]=useState(true), [connected,setConnected]=useState(true), [serviceError,setServiceError]=useState(''), [modal,setModal]=useState(null), [message,setMessage]=useState(null), [busy,setBusy]=useState(new Set());
+  const updateCheck=useUpdateCheck(session === 'ready'), updateAvailable=updateCheck.update?.status === 'update';
   useEffect(() => {setLayout(defaultLayout);},[defaultLayout]);
   const chooseDefaultLayout=value => {setDefaultLayout(value);setLayout(value);};
   const alive=useRef(true), busyRef=useRef(new Set()), toastTimer=useRef(), fetching=useRef(false);
@@ -62,9 +64,9 @@ function App() {
   const controls={control,busy,settings:openSettings,history:(id,metric) => open('history',{id,metric}),can:(d,action) => d.online && connected && !busy.has(d.id) && d.actions.includes(action)};
   if(session !== 'ready') return <div className="pm-app pm-login"><div className="pm-panel pm-login-card"><span className="pm-brandmark"><Icon name="layers"/></span><h1>IoT 设备管理</h1>{session === 'loading' ? <p className="pm-help" role="status">正在连接管理服务…</p> : <><p className="pm-help" role="alert">{session === 'denied' ? '请使用飞牛 NAS 管理员账号登录，并从桌面重新打开应用。' : serviceError}</p><button className="pm-btn pm-btn-primary" onClick={() => location.reload()}>重新检查连接</button></>}</div></div>;
   const active=devices.find(d => d.id === modal?.id);
-  return <div className="pm-app" data-layout={layout}><header className="pm-top"><h1 className="pm-sr-only">IoT 设备管理</h1><div className="pm-top-inner"><DeviceToolbar {...{devices,layout,filter,setFilter,setLayout}} add={() => open('add')}/><nav className="pm-top-actions" aria-label="应用设置"><button className="pm-nav pm-utility" aria-label="设置" title="设置" aria-haspopup="dialog" onClick={() => openSettings()}><Icon name="settings"/></button></nav></div></header><div className="pm-service-error" role="status" hidden={!serviceError}>{serviceError}</div><main className="pm-content"><NewDevicesNotice devices={discovery.candidates} dismiss={discovery.dismiss} add={device => open('add',{device})}/><DeviceWorkspace {...{devices,selected,layout,filter,setFilter,loading}} select={setSelected} openControl={id => {setSelected(id);open('control',{id});}} {...controls}/></main><Message message={modal ? null : message}/>
+  return <div className="pm-app" data-layout={layout}><header className="pm-top"><h1 className="pm-sr-only">IoT 设备管理</h1><div className="pm-top-inner"><DeviceToolbar {...{devices,layout,filter,setFilter,setLayout}} add={() => open('add')}/><nav className="pm-top-actions" aria-label="应用设置"><button className="pm-nav pm-utility" aria-label="设置" aria-description={updateAvailable ? '有新版本可更新' : undefined} title={updateAvailable ? '设置（有新版本）' : '设置'} aria-haspopup="dialog" onClick={() => openSettings()}><Icon name="settings"/>{updateAvailable && <UpdateDot/>}</button></nav></div></header><div className="pm-service-error" role="status" hidden={!serviceError}>{serviceError}</div><main className="pm-content"><NewDevicesNotice devices={discovery.candidates} dismiss={discovery.dismiss} add={device => open('add',{device})}/><DeviceWorkspace {...{devices,selected,layout,filter,setFilter,loading}} select={setSelected} openControl={id => {setSelected(id);open('control',{id});}} {...controls}/></main><Message message={modal ? null : message}/>
     {modal?.type === 'add' && <AddDialog {...{devices,message}} initialDevice={modal.device} onClose={close} added={async device => {discovery.dismiss(device.id);setSelected(device.id);await sync();close();notify(device.online ? '设备已接入' : '已登记，等待设备上线');}}/>}
-    {modal?.type === 'settings' && <SettingsDialog {...{devices,settings,sync,message,notify,busy,theme,setTheme,defaultLayout}} setDefaultLayout={chooseDefaultLayout} initialId={modal.id} initialTab={modal.tab} onClose={close}/>}
+    {modal?.type === 'settings' && <SettingsDialog {...{devices,settings,sync,message,notify,busy,theme,setTheme,defaultLayout,updateCheck}} setDefaultLayout={chooseDefaultLayout} initialId={modal.id} initialTab={modal.tab} onClose={close}/>}
     {modal?.type === 'history' && <HistoryDialog saveChartMetric={saveChartMetric} devices={devices} initialId={modal.id || selected} initialMetric={modal.metric} message={message} onClose={close}/>}
     {modal?.type === 'control' && <Modal name="control" title="设备控制" message={message} onClose={close}><div className="pm-dialog-body pm-control-body">{active ? <Detail device={active} {...controls}/> : <div className="pm-empty">设备已移除</div>}</div></Modal>}
   </div>;

@@ -17,6 +17,8 @@ type runtimeState struct {
 	failures           int
 	availability, busy bool
 	actions            []string
+	powerOnModes       []string
+	activityTargets    Obj
 	err, lanErr        string
 }
 type deviceEntry struct {
@@ -56,6 +58,9 @@ func newManager(s *Store, timeout, interval time.Duration) (*Manager, error) {
 		}
 	}
 	for _, d := range s.devices() {
+		if d["activity"] == nil {
+			d["activity"] = activityValues(obj(d["state"]))
+		}
 		id := str(d["id"])
 		m.devices[id] = &deviceEntry{d: d, r: runtimeState{failures: 3, actions: []string{}}}
 		m.order = append(m.order, id)
@@ -211,6 +216,13 @@ func (m *Manager) pollAll() {
 		}(e)
 	}
 	wg.Wait()
+	m.mu.Lock()
+	for _, e := range m.devices {
+		if m.recordPresence(e) {
+			m.store.save(e.d)
+		}
+	}
+	m.mu.Unlock()
 	if m.recoverLAN != nil && m.ctx.Err() == nil {
 		m.recoverLAN()
 	}
@@ -287,7 +299,7 @@ func (m *Manager) readDevice(ctx context.Context, d Obj, route string) (Obj, []s
 			power = obj(reading["data"])
 		}
 	}
-	return normalize(str(d["model"]), info, power), actions, nil
+	return normalize(str(d["model"]), info, power, obj(caps["data"])), actions, nil
 }
 
 // Caller holds m.mu and the entry operation lock.
@@ -306,6 +318,7 @@ func (m *Manager) applyReading(e *deviceEntry, state Obj, actions []string, rout
 		}
 	}
 	e.r.actions = actions
+	e.r.powerOnModes = stringsOf(state["powerOnModes"])
 	if route == "lan" {
 		e.r.lanLast = now
 		e.r.failures = 0
@@ -315,6 +328,8 @@ func (m *Manager) applyReading(e *deviceEntry, state Obj, actions []string, rout
 		e.r.availability = true
 	}
 	e.r.err = ""
+	m.recordStateChanges(e, state)
+	m.recordPresence(e)
 	m.store.save(e.d)
 	m.store.recordSample(e.d, now.UnixMilli())
 }
@@ -357,6 +372,9 @@ func (m *Manager) read(ctx context.Context, e *deviceEntry) Obj {
 	e.r.err = "等待设备接入"
 	if last != nil {
 		e.r.err = last.Error()
+	}
+	if ctx.Err() == nil && m.recordPresence(e) {
+		m.store.save(e.d)
 	}
 	return m.public(e)
 }
@@ -555,12 +573,16 @@ func (m *Manager) update(id string, input Obj) (Obj, error) {
 		}
 		next["password"] = m.store.encrypt(password)
 	}
+	message := "连接配置已保存"
+	if next["address"] != e.d["address"] {
+		message += fmt.Sprintf("；连接地址：%s → %s", valueOr(e.d["address"], "未配置"), valueOr(next["address"], "未配置"))
+	}
 	if next["address"] != e.d["address"] || next["method"] != e.d["method"] || next["password"] != e.d["password"] {
 		e.r = runtimeState{failures: 3, actions: []string{}}
 	}
 	e.d = next
 	m.store.save(next)
-	m.store.log(next, "connection.update", "ok", "连接配置已保存")
+	m.store.log(next, "connection.update", "ok", message)
 	return m.public(e), nil
 }
 func (m *Manager) remove(id string) error {
@@ -589,6 +611,9 @@ func matches(s Obj, action string, p Obj) bool {
 	switch action {
 	case "config.set":
 		values := obj(p["values"])
+		if p["section"] == "device" {
+			return s["powerOnMode"] != nil && s["powerOnMode"] == requestedPowerOnMode(values)
+		}
 		index := int(num(values["index"]))
 		names := arr(s["outletNames"])
 		return p["section"] == "socket" && index >= 0 && index < len(names) && names[index] == values["name"]
@@ -645,13 +670,21 @@ func (m *Manager) write(ctx context.Context, e *deviceEntry, action string, p Ob
 		m.mu.Unlock()
 		return nil, failure("设备暂时离线，无法控制", 409, "offline")
 	}
-	if (action != "config.set" || p["section"] == "socket") && !contains(e.r.actions, action) {
+	if (action != "config.set" || p["section"] == "socket" || p["section"] == "device") && !contains(e.r.actions, action) {
 		m.mu.Unlock()
 		return nil, failure("当前固件未声明支持此操作", 422, "unsupported")
 	}
+	if action == "config.set" && p["section"] == "device" {
+		state, values := obj(d["state"]), obj(p["values"])
+		if !contains(stringsOf(state["powerOnModes"]), requestedPowerOnMode(values)) || boolean(state["powerOnLegacy"]) && values["power_on_mode"] != nil {
+			m.mu.Unlock()
+			return nil, failure("当前固件不支持此上电输出策略", 422, "unsupported")
+		}
+	}
 	e.r.busy = true
+	e.r.activityTargets = activityTargets(d, action, p)
 	m.mu.Unlock()
-	defer func() { m.mu.Lock(); e.r.busy = false; m.mu.Unlock() }()
+	defer func() { m.mu.Lock(); e.r.busy = false; e.r.activityTargets = nil; m.mu.Unlock() }()
 	var err error
 	if route == "lan" {
 		err = m.checkLAN(ctx, d)
@@ -669,7 +702,7 @@ func (m *Manager) write(ctx context.Context, e *deviceEntry, action string, p Ob
 		if codeOf(err) == "transport_error" {
 			outcome = "unconfirmed"
 		}
-		m.store.log(d, action, outcome, err.Error())
+		m.store.log(d, action, outcome, controlDescription(d, action, p)+"；"+err.Error())
 		m.mu.Unlock()
 		return nil, err
 	}
@@ -702,7 +735,13 @@ func (m *Manager) write(ctx context.Context, e *deviceEntry, action string, p Ob
 			message = "插口名称已同步到设备"
 		}
 	}
-	m.store.log(e.d, action, outcome, message)
+	if action == "config.set" && p["section"] == "device" {
+		message = "设备已接收，上电输出设置等待确认"
+		if confirmed {
+			message = "上电输出设置已同步到设备"
+		}
+	}
+	m.store.log(e.d, action, outcome, controlDescription(d, action, p)+"；"+message)
 	return Obj{"code": response["code"], "confirmed": confirmed, "device": m.public(e), "message": message}, nil
 }
 func (m *Manager) control(ctx context.Context, id, action string, p Obj) (Obj, error) {
@@ -849,6 +888,9 @@ func (m *Manager) mqttOnline(online bool) {
 	for _, e := range m.devices {
 		e.r.mqttLast = time.Time{}
 		e.r.availability = false
+		if !online && m.recordPresence(e) {
+			m.store.save(e.d)
+		}
 	}
 	m.mu.Unlock()
 }
@@ -915,15 +957,24 @@ func (m *Manager) onPacket(tail string, payload []byte, retained bool) {
 	}
 	switch parts[2] {
 	case "availability":
-		e.r.availability = string(payload) == "online"
-		e.r.mqttLast = time.Time{}
+		value := string(payload)
+		if value != "online" && value != "offline" {
+			return
+		}
+		if value == "offline" || !e.r.availability {
+			e.r.mqttLast = time.Time{}
+		}
+		e.r.availability = value == "online"
 		if e.r.availability {
 			go m.refreshAsync(id)
+		} else if m.recordPresence(e) {
+			m.store.save(e.d)
 		}
 	case "capabilities":
 		p, binary, err := decodeDeviceWire(payload)
 		if err == nil && (p["device_id"] == nil || verifyIdentity(p, e.d) == nil) {
 			e.r.actions = stringsOf(p["actions"])
+			e.r.powerOnModes = powerOnModes(p["power_on_modes"])
 			wire := "json"
 			if binary {
 				wire = "msgpack"
@@ -948,7 +999,7 @@ func (m *Manager) onPacket(tail string, payload []byte, retained bool) {
 			s := obj(e.d["state"])
 			power = Obj{"power_watts": s["power"], "energy_kwh": s["energy"]}
 		}
-		e.d["state"] = normalize(str(e.d["model"]), p, power)
+		e.d["state"] = normalize(str(e.d["model"]), p, power, Obj{"power_on_modes": e.r.powerOnModes})
 		e.d["lastSeen"] = time.Now().UTC().Format(time.RFC3339Nano)
 		e.r.mqttLast = time.Now()
 		if e.d["model"] == "S30-V1B" {
@@ -960,6 +1011,8 @@ func (m *Manager) onPacket(tail string, payload []byte, retained bool) {
 				e.d["billing"] = bill
 			}
 		}
+		m.recordStateChanges(e, obj(e.d["state"]))
+		m.recordPresence(e)
 		m.store.save(e.d)
 		if e.d["model"] != "TC1" {
 			m.store.recordSample(e.d, time.Now().UnixMilli())

@@ -229,8 +229,28 @@ func verifyIdentity(info, d Obj) error {
 	}
 	return nil
 }
-func normalize(model string, s, p Obj) Obj {
-	out := Obj{"version": str(s["version"]), "childLock": boolean(s["child_lock"])}
+func powerOnModes(raw any) []string {
+	modes := []string{}
+	for _, mode := range []string{"off", "on", "restore"} {
+		if contains(stringsOf(raw), mode) {
+			modes = append(modes, mode)
+		}
+	}
+	return modes
+}
+
+func requestedPowerOnMode(values Obj) string {
+	if enabled, legacy := values["power_on"].(bool); legacy {
+		if enabled {
+			return "on"
+		}
+		return "off"
+	}
+	return str(values["power_on_mode"])
+}
+
+func normalize(model string, s, p, caps Obj) Obj {
+	out := Obj{"version": str(s["version"]), "childLock": boolean(s["child_lock"]), "network": networkState(s)}
 	put := func(v Obj) {
 		for k, x := range v {
 			out[k] = x
@@ -262,6 +282,17 @@ func normalize(model string, s, p Obj) Obj {
 			names = append(names, name)
 		}
 		put(Obj{"outlets": outlets, "outletNames": names, "on": on, "light": boolean(s["led_enabled"]), "power": finite(p["power_watts"]), "energy": finite(p["energy_kwh"])})
+		if mode, present := s["power_on_mode"]; present {
+			if contains([]string{"off", "on", "restore"}, str(mode)) {
+				put(Obj{"powerOnMode": mode, "powerOnModes": powerOnModes(caps["power_on_modes"]), "powerOnLegacy": false})
+			}
+		} else if enabled, valid := s["power_on"].(bool); valid {
+			mode := "off"
+			if enabled {
+				mode = "on"
+			}
+			put(Obj{"powerOnMode": mode, "powerOnModes": []string{"off", "on"}, "powerOnLegacy": true})
+		}
 		if model == "S30-V1B" {
 			meter := obj(s["metering"])
 			// The full status contains all metering fields; do not add another poll.
@@ -351,6 +382,11 @@ func validateControl(model, action string, p Obj) error {
 			validIndex && index >= 0 && index < float64(socketCount(model)) && math.Trunc(index) == index &&
 			validName && utf8.ValidString(name) && strings.TrimSpace(name) != "" && len(name) <= 63 &&
 			strings.IndexFunc(name, func(r rune) bool { return r < 32 || r == 127 }) < 0
+		if allowed("section", "values") && p["section"] == "device" && len(values) == 1 {
+			_, legacy := values["power_on"].(bool)
+			mode, modern := values["power_on_mode"].(string)
+			ok = legacy || modern && contains([]string{"off", "on", "restore"}, mode)
+		}
 	case model == "M1" && action == "display.set":
 		ok = allowed("brightness") && integer("brightness", 0, 100) && int(num(p["brightness"]))%25 == 0
 	case model == "A1" && action == "fan.set":
