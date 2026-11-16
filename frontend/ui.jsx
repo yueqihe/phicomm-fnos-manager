@@ -11,6 +11,9 @@ export const isAirMonitor = device => ['M1','DAIKIN'].includes(device.model);
 export function DeviceIcon({device}) { return <Icon name={isMeteredPlug(device) ? 'plug' : isAirMonitor(device) ? 'air' : 'wind'}/>; }
 export function Dot({online}) { return <span className={`pm-dot${online ? '' : ' pm-dot-off'}`}/>; }
 export function UpdateDot() { return <span className="pm-update-dot" aria-hidden="true"/>; }
+export function DeviceSettingsButton({device,onOpen}) {
+  return device ? <button className="pm-icon-button" type="button" aria-label={`${device.name}接入设置`} title="接入设置" aria-haspopup="dialog" onClick={() => onOpen(device.id,'devices')}><Icon name="settings"/></button> : null;
+}
 export function Status({device}) { return <span className="pm-status"><Dot online={device.online}/>{device.online ? '在线' : '离线'}</span>; }
 export const metric = (value, digits) => typeof value === 'number' && Number.isFinite(value) ? digits === undefined ? String(value) : value.toFixed(digits) : '—';
 export const when = value => value ? new Date(value).toLocaleString('zh-CN', {hour12: false}) : '尚未连接';
@@ -26,7 +29,7 @@ export function RoomField({value, onChange, devices}) {
 export function Message({message, inline = false}) {
   return <div className={`${inline ? 'pm-inline-status' : 'pm-toast'}${message?.error ? ' is-error' : ''}`} role="status" aria-live="polite" hidden={!message}>{message?.text}</div>;
 }
-export function Modal({name, title, children, footer, onClose, message}) {
+export function Modal({name, title, children, footer, onClose, message, headerActions}) {
   const ref = useRef();
   useLayoutEffect(() => {
     const el = ref.current, previous = document.activeElement;
@@ -37,7 +40,7 @@ export function Modal({name, title, children, footer, onClose, message}) {
     if(e.target !== e.currentTarget) return;
     const box = e.currentTarget.getBoundingClientRect();
     if(e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom) onClose();
-  }}><div className="pm-dialog-head"><h2>{title}</h2><button className="pm-icon-button" type="button" data-close aria-label={`关闭${title}`} onClick={onClose}><Icon name="x"/></button></div>{children}{footer}<Message inline message={message}/></dialog>;
+  }}><div className="pm-dialog-head">{headerActions ? <div className="pm-heading-actions"><h2>{title}</h2>{headerActions}</div> : <h2>{title}</h2>}<button className="pm-icon-button" type="button" data-close aria-label={`关闭${title}`} onClick={onClose}><Icon name="x"/></button></div>{children}{footer}<Message inline message={message}/></dialog>;
 }
 
 let requestToken = '';

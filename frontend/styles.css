@@ -73,6 +73,8 @@
 #manager .pm-panel{background:var(--pm-paper);border:1px solid var(--pm-line);border-radius:var(--pm-radius);min-width:0}
 #manager .pm-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:60px;padding:16px 20px;border-bottom:1px solid var(--pm-line)}
 #manager .pm-panel-title{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600}
+#manager .pm-heading-actions{display:flex;align-items:center;gap:6px;min-width:0}
+#manager .pm-panel-head .pm-heading-actions>.pm-icon-button{margin-block:-10px}
 #manager .pm-index{font:10px Consolas,monospace;color:var(--pm-accent)}
 #manager .pm-quiet{font-size:11px;color:var(--pm-muted)}
 #manager .pm-filterbar{padding:14px 20px;display:flex;align-items:center;gap:5px;border-bottom:1px solid var(--pm-line)}
@@ -210,11 +212,12 @@
 #manager .pm-event{display:grid;grid-template-columns:65px 1fr auto;gap:15px;align-items:center;border-bottom:1px solid var(--pm-line);padding:19px 0;font-size:12px}
 #manager .pm-event:last-child{border-bottom:0}
 #manager .pm-event time{font:11px Consolas,monospace;color:var(--pm-muted)}
-#manager .pm-room-header{display:flex;align-items:center;gap:9px;padding:18px 0 12px;font-size:12px}
-#manager .pm-room-header span{font-size:10px;color:var(--pm-muted)}
-#manager .pm-room-header:first-child{padding-top:0}
-#manager .pm-room-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:16px;margin-bottom:7px}
-#manager .pm-room-item{min-width:0;display:flex;flex-direction:column}
+#manager .pm-rooms{display:grid;gap:24px;margin-bottom:7px}
+#manager .pm-room-group{min-width:0}
+#manager .pm-room-header{display:flex;align-items:center;gap:9px;margin:0 0 12px;font-size:12px;font-weight:500;overflow-wrap:anywhere}
+#manager .pm-room-header span{font-size:10px;font-weight:400;color:var(--pm-muted);white-space:nowrap;flex-shrink:0}
+#manager .pm-room-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:16px}
+#manager .pm-room-grid>.pm-tile{min-width:0}
 #manager .pm-mobile-picker{display:none}
 #manager .pm-tile{min-height:260px;display:flex;flex-direction:column;flex:1}
 #manager .pm-tile-open{display:flex;flex-direction:column;gap:14px;flex:1;width:100%;padding:6px 16px 8px;border:0;background:transparent;color:inherit;text-align:left}
@@ -397,7 +400,7 @@
   #manager .pm-tile-primary .pm-tile-info{width:auto;flex:1}
   #manager .pm-tile-power-reading{align-self:center;gap:7px;margin-left:auto}
   #manager .pm-history-sparkline{width:calc(100% - 30px);margin:auto 15px 14px}
-  #manager .pm-room-header{padding:0 0 10px}
+  #manager .pm-room-header{margin-bottom:10px}
   #manager .pm-event{grid-template-columns:60px minmax(0,1fr);gap:8px}
   #manager .pm-event>span{overflow-wrap:anywhere}
   #manager .pm-event>span:last-child{grid-column:2}
