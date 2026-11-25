@@ -20,9 +20,9 @@
 
 需要 fnOS 1.2.0 及以上，以及刷入兼容社区固件的 TC1 / M1 / A1 / DAIKIN / S30-V1B。[查看最新版本](https://github.com/yueqihe/phicomm-fnos-manager/releases/latest)。
 
-当前源码版本为 **0.2.16**，优化半透明主题、动态图标和卡片布局，支持卡片拖动排序，完善历史趋势图、列表快速控制和添加后的设备定位。应用包沿用 `phicomm-manager` 标识及原有数据。
+当前源码版本为 **0.2.17**，补全随设备状态持续运行的动态图标：净化器风叶根据实际输出调整转速，排插与插座显示通电动效，检测仪显示采样动效；关闭、离线或采样无效时停止。卡片与列表共用图标，尊重系统“减少动态效果”设置。保留半透明主题、卡片拖动排序、历史趋势图、精简快速控制与添加后设备定位。应用包沿用 `phicomm-manager` 标识及原有数据。
 
-以下链接指向已发布的 **0.2.15** 安装包；0.2.16 可按“开发与构建”说明在本地签名打包。
+以下链接指向已发布的 **0.2.15** 安装包；0.2.17 可按“开发与构建”说明在本地签名打包。
 
 | NAS 架构 | 安装包（0.2.15） |
 | --- | --- |
@@ -129,6 +129,7 @@ npm run test:browser
 npm run test:history
 npm run test:discovery
 npm run test:about
+npm run test:icons
 ```
 
 浏览器测试需要先运行 `npx playwright install chromium`，或通过 `PLAYWRIGHT_CHROMIUM_EXECUTABLE` 指定已安装的 Chromium。打包前会检查源码与静态产物的 SHA256，避免将旧网页打入新包。

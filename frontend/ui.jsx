@@ -2,12 +2,11 @@ import React, {useId, useLayoutEffect, useRef} from 'react';
 import {Icon} from './icons.jsx';
 import {Select} from './select.jsx';
 export {Icon, Select};
+export {DeviceIcon} from './device-icons.jsx';
 
 export const isMeteredPlug = device => ['TC1','S30-V1B'].includes(device.model);
 export const outletCount = device => device.model === 'S30-V1B' ? 1 : 6;
 export const isAirMonitor = device => ['M1','DAIKIN'].includes(device.model);
-const modelIcons={TC1:'plug','S30-V1B':'power',DAIKIN:'gauge',M1:'air',A1:'wind'};
-export function DeviceIcon({device}) {return <Icon name={modelIcons[device.model] || 'plug'} data-model={device.model} data-icon-online={device.online}/>;}
 export function Dot({online}) { return <span className={`pm-dot${online ? '' : ' pm-dot-off'}`}/>; }
 export function UpdateDot() { return <span className="pm-update-dot" aria-hidden="true"/>; }
 export function DeviceSettingsButton({device,onOpen}) {

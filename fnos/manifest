@@ -1,5 +1,5 @@
 appname=phicomm-manager
-version=0.2.16
+version=0.2.17
 display_name=IoT 设备管理
 desc=原生管理 TC1 智能排插、M1 空气检测仪、A1 空气净化器、DAIKIN 大金检测仪和 S30-V1B 单路插座，支持局域网与 MQTT 接入、空间管理和手机访问。
 source=thirdparty
@@ -14,4 +14,4 @@ desktop_applaunchname=phicomm-manager.main
 ctl_stop=true
 checkport=false
 disable_authorization_path=true
-changelog=优化半透明主题、动态设备图标及卡片布局，支持卡片拖动排序；历史曲线使用苔绿趋势线和高低波动带，支持逐点查看并保留缺失时段；精简列表快速控制，合并总开关与在线状态；快速添加设备后立即更新视图，切换卡片时自动定位当前设备。
+changelog=补全设备动态图标：净化器风叶随实际输出调整转速，排插与插座显示通电动效，空气检测仪显示采样动效；卡片与列表保持一致，设备关闭、离线或采样无效时停止动画，并适配系统减少动态效果设置。

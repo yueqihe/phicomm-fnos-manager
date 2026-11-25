@@ -712,7 +712,21 @@ html,body{margin:0;min-height:100%;background:var(--pm-bg)}
   #manager .pm-top{background:var(--pm-paper);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
 
+#manager .pm-glyph-energy{display:none}
+#manager .pm-glyph-needle{transform:rotate(var(--pm-gauge-angle));transform-origin:12px 14px;transition:transform .35s ease-out}
 @media(prefers-reduced-motion:no-preference){
+  #manager .pm-device-glyph[data-icon-active="true"] .pm-glyph-rotor{transform-origin:12px 12px;animation:pm-glyph-spin var(--pm-rotor-duration) linear infinite}
+  #manager .pm-device-glyph[data-icon-active="true"] .pm-glyph-charge{animation:pm-glyph-charge 2.4s ease-in-out infinite}
+  #manager .pm-device-glyph[data-icon-active="true"] .pm-glyph-power-ring{opacity:.32}
+  #manager .pm-device-glyph[data-icon-active="true"] .pm-glyph-energy{display:block;stroke-dasharray:24 76;animation:pm-glyph-energy 2.6s linear infinite}
+  #manager .pm-device-glyph[data-icon-active="true"] .pm-glyph-flow{animation:pm-glyph-flow 2.8s ease-in-out infinite}
+  #manager .pm-device-glyph[data-icon-active="true"] .pm-glyph-flow-second{animation-delay:-1.4s}
+  #manager .pm-device-glyph[data-icon-active="true"] .pm-glyph-scan{transform-origin:12px 14px;animation:pm-glyph-scan 3.6s ease-in-out infinite}
+  @keyframes pm-glyph-spin{to{transform:rotate(360deg)}}
+  @keyframes pm-glyph-charge{0%,100%{opacity:.45;fill:transparent}45%,65%{opacity:1;fill:currentColor;fill-opacity:.18}}
+  @keyframes pm-glyph-energy{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+  @keyframes pm-glyph-flow{0%,100%{opacity:.45;transform:translateY(-.6px)}50%{opacity:1;transform:translateY(.8px)}}
+  @keyframes pm-glyph-scan{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
   #manager .pm-icon{--pm-icon-hover:translateY(-1px) scale(1.1);transition:transform .18s cubic-bezier(.2,.75,.35,1.25)}
   #manager .pm-icon:is([data-icon="settings"],[data-icon="edit"],[data-icon="tariff"],[data-icon="appearance"],[data-icon="plug"]){--pm-icon-hover:rotate(-12deg) scale(1.08)}
   #manager .pm-icon:is([data-icon="x"],[data-icon="plus"],[data-icon="refresh"]){--pm-icon-hover:rotate(18deg) scale(1.09)}

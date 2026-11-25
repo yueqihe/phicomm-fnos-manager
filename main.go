@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-const version = "0.2.16"
+const version = "0.2.17"
 
 //go:embed public/index.html public/app.js public/styles.css
 var frontend embed.FS

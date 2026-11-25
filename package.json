@@ -1,6 +1,6 @@
 {
   "name": "phicomm-native-manager",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "private": true,
   "author": { "name": "情深深雨蒙蒙", "url": "https://github.com/yueqihe" },
   "repository": { "type": "git", "url": "https://github.com/yueqihe/phicomm-fnos-manager.git" },
@@ -19,6 +19,7 @@
     "test:discovery": "node test/automatic-discovery-browser.cjs",
     "test:about": "node test/about-browser.cjs",
     "test:readings": "node --test test/reading-status.mjs",
+    "test:icons": "node test/device-icons-browser.cjs",
     "build:fpk": "node scripts/build-fpk.js",
     "fpk:icons": "node scripts/fpk-icons.cjs"
   },
