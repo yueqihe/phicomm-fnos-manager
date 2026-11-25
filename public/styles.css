@@ -130,6 +130,8 @@
 #manager .pm-air-measurements>div{min-width:0}
 @container pm-device-detail (min-width:380px){
   #manager .pm-measurements.pm-air-measurements{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #manager .pm-control-body .pm-outlets{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #manager .pm-control-body .pm-outlet-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
 @container pm-device-detail (min-width:350px){
   #manager .pm-workspace .pm-measurements.pm-air-measurements{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -711,6 +713,55 @@ html,body{margin:0;min-height:100%;background:var(--pm-bg)}
 @media (prefers-reduced-transparency:reduce),(forced-colors:active){
   #manager .pm-top{background:var(--pm-paper);-webkit-backdrop-filter:none;backdrop-filter:none}
 }
+
+/* Keep the wallpaper fixed to the viewport as cards and dialogs scroll. */
+:root{--pm-wallpaper-image:url("./images/wallpaper-default.webp");--pm-wallpaper-opacity:.5}
+:root{--pm-card-opacity:.7;--pm-card-rgb:247 249 249;--pm-card-rail-rgb:234 239 241;--pm-chrome-rgb:243 247 248}
+:root[data-theme="dark"]{--pm-card-rgb:36 39 45;--pm-card-rail-rgb:40 43 49;--pm-chrome-rgb:45 48 54}
+@media not (prefers-reduced-transparency:reduce){
+  @media(forced-colors:none){
+    html[data-card-transparency] #manager :is(.pm-tile,.pm-workspace>.pm-panel){background-color:rgb(var(--pm-card-rgb) / var(--pm-card-opacity))}
+    html[data-card-transparency] #manager .pm-workspace>.pm-list-panel{background-color:rgb(var(--pm-card-rail-rgb) / var(--pm-card-opacity))}
+    html[data-card-transparency] #manager .pm-top{background-color:rgb(var(--pm-chrome-rgb) / var(--pm-card-opacity))}
+  }
+}
+html[data-wallpaper] body,html[data-wallpaper] #manager .pm-app{background:transparent}
+html[data-wallpaper] body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:var(--pm-wallpaper-opacity);background-color:var(--pm-bg);background-image:linear-gradient(rgb(12 24 48 / 12%),rgb(12 24 48 / 12%)),var(--pm-wallpaper-image);background-position:center;background-size:cover;background-repeat:no-repeat}
+html[data-wallpaper="plain"] body::before{background-image:none;opacity:1}
+html[data-theme="dark"][data-wallpaper] body::before{background-image:linear-gradient(rgb(5 9 20 / 34%),rgb(5 9 20 / 34%)),var(--pm-wallpaper-image)}
+html[data-theme="dark"][data-wallpaper="plain"] body::before{background-image:none}
+html[data-wallpaper]:not([data-wallpaper="plain"]) #manager :is(.pm-room-header,.pm-footer){color:#f0f5ff;text-shadow:0 1px 4px #061025b3}
+html[data-wallpaper]:not([data-wallpaper="plain"]) #manager .pm-room-header span{color:#dce8f9}
+html[data-wallpaper]:not([data-wallpaper="plain"]) #manager :is(.pm-footer-author,.pm-footer-version):hover{color:#fff}
+@media(max-width:700px){html[data-wallpaper="default"] body::before{background-position:center,62% center}}
+@supports ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))) and (color:light-dark(white,black)){
+  @media not (prefers-reduced-transparency:reduce){
+    @media(forced-colors:none){
+      :root[data-wallpaper]:not([data-wallpaper="plain"]){--pm-pane:light-dark(rgb(247 249 249 / 80%),rgb(36 39 45 / 82%));--pm-rail:light-dark(rgb(234 239 241 / 77%),rgb(40 43 49 / 80%));--pm-chrome:light-dark(rgb(243 247 248 / 84%),rgb(45 48 54 / 84%));--pm-modal:light-dark(rgb(241 245 246 / 92%),rgb(35 38 44 / 89%))}
+      html[data-wallpaper]:not([data-wallpaper="plain"]) #manager .pm-tile{-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+    }
+  }
+}
+#manager .pm-wallpaper-settings{margin-top:22px}
+#manager .pm-appearance-help{margin-top:18px}
+#manager .pm-wallpaper-settings>h3{font-size:12px;font-weight:600;margin-bottom:10px}
+#manager .pm-wallpaper-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+#manager .pm-wallpaper-choice{min-width:0;padding:0;border:0;background:transparent;text-align:left;color:var(--pm-muted);font-size:11px;line-height:1.6}
+#manager .pm-wallpaper-choice>span:last-child{display:block;margin-top:5px}
+#manager .pm-wallpaper-thumb{position:relative;display:grid;place-items:center;overflow:hidden;aspect-ratio:1.6;border-radius:6px;background:var(--pm-tray);box-shadow:inset 0 0 0 1px var(--pm-line)}
+#manager .pm-wallpaper-thumb img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+#manager .pm-wallpaper-thumb-default img{object-position:62% center}
+#manager .pm-wallpaper-choice[aria-pressed="true"]{color:var(--pm-ink)}
+#manager .pm-wallpaper-choice[aria-pressed="true"] .pm-wallpaper-thumb{outline:2px solid var(--pm-accent);outline-offset:2px}
+#manager .pm-wallpaper-check{position:absolute;right:5px;bottom:5px;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--pm-primary);color:white}
+#manager .pm-wallpaper-check svg{width:12px;height:12px}
+#manager .pm-wallpaper-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:14px 0 8px}
+#manager .pm-wallpaper-actions .pm-text-action{font-size:11px}
+#manager :is(.pm-wallpaper-opacity,.pm-card-appearance) output{color:var(--pm-ink);font-variant-numeric:tabular-nums}
+#manager .pm-card-appearance{margin-top:20px}
+#manager .pm-wallpaper-opacity .pm-range:disabled{opacity:.45}
+#manager .pm-wallpaper-filename{font-size:11px;color:var(--pm-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px}
+@media(forced-colors:active){html[data-wallpaper] body::before{background-image:none!important}}
 
 #manager .pm-glyph-energy{display:none}
 #manager .pm-glyph-needle{transform:rotate(var(--pm-gauge-angle));transform-origin:12px 14px;transition:transform .35s ease-out}

@@ -1,7 +1,7 @@
 appname=phicomm-manager
-version=0.2.17
+version=0.2.18
 display_name=IoT 设备管理
-desc=原生管理 TC1 智能排插、M1 空气检测仪、A1 空气净化器、DAIKIN 大金检测仪和 S30-V1B 单路插座，支持局域网与 MQTT 接入、空间管理和手机访问。
+desc=面向飞牛 NAS 的智能设备管理工具，集中管理智能插座、空气检测仪和空气净化器，支持实时状态与控制、历史曲线、用电统计、电费估算和空间分组，可通过飞牛远程访问查看和控制设备。
 source=thirdparty
 platform=arm
 maintainer=情深深雨蒙蒙
@@ -14,4 +14,4 @@ desktop_applaunchname=phicomm-manager.main
 ctl_stop=true
 checkport=false
 disable_authorization_path=true
-changelog=补全设备动态图标：净化器风叶随实际输出调整转速，排插与插座显示通电动效，空气检测仪显示采样动效；卡片与列表保持一致，设备关闭、离线或采样无效时停止动画，并适配系统减少动态效果设置。
+changelog=新增默认壁纸、自定义图片和纯色背景，手机端围绕人物居中裁剪；壁纸与卡片透明度可分别调节，默认分别为 50% 和 30%，卡片设置同步应用于列表面板和顶部工具栏；TC1 控制弹窗支持每行三个插口；优化安装与升级说明。

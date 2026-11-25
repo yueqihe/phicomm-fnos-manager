@@ -26,9 +26,9 @@ import (
 	"time"
 )
 
-const version = "0.2.17"
+const version = "0.2.18"
 
-//go:embed public/index.html public/app.js public/styles.css
+//go:embed public/index.html public/app.js public/styles.css public/images/wallpaper-default.webp
 var frontend embed.FS
 
 type localSocketKey struct{}
@@ -158,7 +158,12 @@ func (a *App) handle(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		path = strings.TrimPrefix(path, a.base)
 	}
 	if !strings.HasPrefix(path, "/api/") {
-		files := map[string][2]string{"/": {"public/index.html", "text/html; charset=utf-8"}, "/app.js": {"public/app.js", "text/javascript; charset=utf-8"}, "/styles.css": {"public/styles.css", "text/css; charset=utf-8"}}
+		files := map[string][2]string{
+			"/":                              {"public/index.html", "text/html; charset=utf-8"},
+			"/app.js":                        {"public/app.js", "text/javascript; charset=utf-8"},
+			"/styles.css":                    {"public/styles.css", "text/css; charset=utf-8"},
+			"/images/wallpaper-default.webp": {"public/images/wallpaper-default.webp", "image/webp"},
+		}
 		file, ok := files[path]
 		if !ok || (r.Method != "GET" && r.Method != "HEAD") {
 			return 0, nil, failure("页面不存在", 404, "not_found")

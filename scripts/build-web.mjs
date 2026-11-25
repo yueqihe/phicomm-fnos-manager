@@ -14,5 +14,5 @@ const dependencies=['react','react-dom','scheduler','lucide-react'];
 for(const name of dependencies) copyFileSync(at(`node_modules/${name}/LICENSE`),at(`public/licenses/${name}.LICENSE`));
 const sources=['package.json','package-lock.json','scripts/build-web.mjs',icon,...readdirSync(at('frontend')).sort().map(name => `frontend/${name}`)];
 const hash=name => createHash('sha256').update(readFileSync(at(name))).digest('hex');
-const assets=['public/index.html','public/app.js','public/styles.css',...dependencies.map(name => `public/licenses/${name}.LICENSE`)];
+const assets=['public/index.html','public/app.js','public/styles.css','public/images/wallpaper-default.webp',...dependencies.map(name => `public/licenses/${name}.LICENSE`)];
 writeFileSync(at('public/build.json'),JSON.stringify({framework:'React',sources:Object.fromEntries(sources.map(name => [name,hash(name)])),assets:Object.fromEntries(assets.map(name => [name,hash(name)]))},null,2)+'\n');

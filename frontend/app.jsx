@@ -10,9 +10,11 @@ import {NewDevicesNotice, useAutomaticDiscovery} from './automatic-discovery.jsx
 import {useUpdateCheck} from './updates.js';
 import {AppFooter} from './about.jsx';
 import {AppIcon, useAppFavicon} from './app-icon.jsx';
+import {useWallpaper} from './wallpaper.jsx';
 
 function App() {
   const [theme,setTheme]=useTheme();
+  const wallpaper=useWallpaper();
   const [defaultLayout,setDefaultLayout]=useDefaultLayout();
   const [deviceSort,setDeviceSort,manualOrder,saveManualOrder]=useDeviceSort();
   const [session,setSession]=useState('loading'), [devices,setDevices]=useState([]), [settings,setSettings]=useState(null), [selected,setSelected]=useState(''), [layout,setLayout]=useState(defaultLayout), [filter,setFilter]=useState('all'), [loading,setLoading]=useState(true), [connected,setConnected]=useState(true), [serviceError,setServiceError]=useState(''), [modal,setModal]=useState(null), [message,setMessage]=useState(null), [busy,setBusy]=useState(new Set());
@@ -107,7 +109,7 @@ function App() {
     <main className="pm-content" ref={workspace}><NewDevicesNotice devices={discovery.candidates} dismiss={discovery.dismiss} add={device => open('add',{device})}/><DeviceWorkspace {...{devices,selected,layout,filter,setFilter,loading,deviceSort,manualOrder,moveCard}} select={setSelected} openControl={id => {setSelected(id);open('control',{id});}} {...controls}/></main>
     <AppFooter updateCheck={updateCheck} onAbout={openAbout}/><Message message={modal ? null : message}/>
     {modal?.type === 'add' && <AddDialog {...{devices,message}} initialDevice={modal.device} onClose={close} added={deviceAdded}/>}
-    {modal?.type === 'settings' && <SettingsDialog {...{devices,settings,sync,message,notify,busy,theme,setTheme,defaultLayout,deviceSort,setDeviceSort,updateCheck}} setDefaultLayout={chooseDefaultLayout} initialId={modal.id} initialTab={modal.tab} onClose={close}/>}
+    {modal?.type === 'settings' && <SettingsDialog {...{devices,settings,sync,message,notify,busy,theme,setTheme,wallpaper,defaultLayout,deviceSort,setDeviceSort,updateCheck}} setDefaultLayout={chooseDefaultLayout} initialId={modal.id} initialTab={modal.tab} onClose={close}/>}
     {modal?.type === 'history' && <HistoryDialog saveChartMetric={saveChartMetric} devices={devices} initialId={modal.id || selected} initialMetric={modal.metric} message={message} onClose={close}/>}
     {modal?.type === 'control' && <Modal name="control" title="设备控制" message={message} onClose={close} headerActions={<DeviceSettingsButton device={active} onOpen={openSettings}/>}><div className="pm-dialog-body pm-control-body">{active ? <Detail device={active} {...controls}/> : <div className="pm-empty">设备已移除</div>}</div></Modal>}
   </div>;

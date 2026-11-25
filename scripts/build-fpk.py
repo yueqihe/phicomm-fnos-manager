@@ -13,7 +13,7 @@ import time
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 # Retain the original firmware workspace layout while supporting a standalone clone.
 REPO = ROOT.parent if all((ROOT.parent / name).is_dir() for name in ["TC1", "M1", "A1"]) else ROOT
-VERSION = "0.2.17"
+VERSION = "0.2.18"
 
 
 def stage_mode(name, is_directory):

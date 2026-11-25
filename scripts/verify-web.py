@@ -10,7 +10,7 @@ def verify():
     metadata = json.loads((ROOT / "public/build.json").read_text(encoding="utf-8"))
     sources = {"package.json", "package-lock.json", "scripts/build-web.mjs", "fnos/app/icon.svg"}
     sources.update("frontend/" + file.name for file in (ROOT / "frontend").iterdir() if file.is_file())
-    assets = {"public/index.html", "public/app.js", "public/styles.css"}
+    assets = {"public/index.html", "public/app.js", "public/styles.css", "public/images/wallpaper-default.webp"}
     assets.update(f"public/licenses/{name}.LICENSE" for name in ["react", "react-dom", "scheduler", "lucide-react"])
     if metadata.get("framework") != "React" or set(metadata["sources"]) != sources or set(metadata["assets"]) != assets:
         raise ValueError("React build metadata is outdated; run npm ci and npm run build:web")
