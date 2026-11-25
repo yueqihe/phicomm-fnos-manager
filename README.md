@@ -20,7 +20,9 @@
 
 需要 fnOS 1.2.0 及以上，以及刷入兼容社区固件的 TC1 / M1 / A1 / DAIKIN / S30-V1B。[查看最新版本](https://github.com/yueqihe/phicomm-fnos-manager/releases/latest)。
 
-当前发布版本为 **0.2.15**，修复空间卡片分组，新增设备排序与接入设置快捷入口，完善设备活动记录、网络信息和插座上电策略；发现新版本时显示设置红点。升级沿用原应用和数据。下载对应架构的安装包；自行构建请参阅下方“开发与构建”。
+当前源码版本为 **0.2.16**，优化半透明主题、动态图标和卡片布局，支持卡片拖动排序，完善历史趋势图、列表快速控制和添加后的设备定位。应用包沿用 `phicomm-manager` 标识及原有数据。
+
+以下链接指向已发布的 **0.2.15** 安装包；0.2.16 可按“开发与构建”说明在本地签名打包。
 
 | NAS 架构 | 安装包（0.2.15） |
 | --- | --- |
@@ -92,7 +94,7 @@
 
 ## 开发与构建
 
-后端需要 Go 1.25+；FPK 打包需要 Python 3 和 [fnpack](https://github.com/ckcoding/fnnas-docs)。前端编译与浏览器测试使用 Node.js 22 / 24，仅用于开发电脑。
+后端需要 Go 1.25+；FPK 打包需要 Python 3 和官方 [fnpack 1.3.3 或更新版本](https://developer.fnnas.com/docs/cli/fnpack/)。前端编译与浏览器测试使用 Node.js 22 / 24，仅用于开发电脑。
 
 已提交 React 静态产物，直接构建 Go 或 FPK 无需 Node.js：
 
@@ -100,11 +102,23 @@
 go test ./...
 go vet ./...
 python scripts/verify-web.py
-python scripts/build-fpk.py --platform arm
-python scripts/build-fpk.py --platform x86
+python scripts/build-fpk.py --platform arm --key /secure/developer.key --cert /secure/developer.crt
+python scripts/build-fpk.py --platform x86 --key /secure/developer.key --cert /secure/developer.crt
 ```
 
-Windows 可使用 `py -3` 替代 `python`。将 Go 和 fnpack 加入 PATH，或分别用 `GO_BIN`、`FNPACK` 环境变量指定路径。构建输出位于 `release/phicomm-manager/`，包含 FPK、SHA256 和安装说明；两种架构分别静态编译，不依赖 NAS 的语言运行时。
+Windows 可使用 `py -3` 替代 `python`。将 Go 和 fnpack 加入 PATH，或分别用 `GO_BIN`、`FNPACK` 环境变量指定路径。签名文件也可通过 `FNPACK_KEY`、`FNPACK_CERT` 提供；Linux / macOS 可使用已导入 fnpack 的证书。
+
+Windows 签名构建需指定已有的 WSL 发行版，并将 `FNPACK` 指向开发电脑上的 Linux x86-64 版 fnpack：
+
+```powershell
+$env:GO_BIN = 'C:\tools\go\bin\go.exe'
+$env:FNPACK = 'C:\tools\fnpack-1.3.3-linux-amd64'
+py -3 scripts/build-fpk.py --platform arm --wsl-distro YOUR_DISTRO --key C:\secure\developer.key --cert C:\secure\developer.crt
+```
+
+脚本在 WSL 的 Linux 临时目录中设置权限后调用 fnpack 签名，完成后原样复制 FPK 并清理临时目录，避免签名后修改包内容。不会将私钥复制进打包目录。仅本地调试可使用 `--nosign`，输出文件带 `-unsigned` 标记；权限整理工具会拒绝改写签名包。
+
+构建输出位于 `release/phicomm-manager/`，包含 FPK、SHA256 和安装说明；两种架构分别静态编译，不依赖 NAS 的语言运行时。证书、私钥、签名文件和 FPK 均不应提交到源码仓库，已配置忽略规则；同步源码不创建 Release 或上传安装包。签名 FPK 内的 `META-INF/developer.crt` 是 fnpack 自动加入的公开证书，私钥始终留在开发电脑。
 
 修改前端后，在开发电脑重新生成静态文件并验证：
 

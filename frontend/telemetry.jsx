@@ -1,4 +1,4 @@
-import React, {useEffect, useId, useRef, useState} from 'react';
+import React, {useEffect, useId, useMemo, useRef, useState} from 'react';
 import {api, Field, Select, metric, isMeteredPlug} from './ui.jsx';
 import {ReadingValue} from './readings.jsx';
 
@@ -11,6 +11,35 @@ export function historyDomain(numbers) {
   const min=Math.min(...numbers), max=Math.max(...numbers);
   const padding=max === min ? Math.max(Math.abs(max)*.04,1) : (max-min)*.1;
   return {low:min < 0 ? min-padding : Math.max(0,min-padding),high:max+padding};
+}
+
+export function previewTrendSegments(points,values) {
+  const segments=[];
+  let segment=[], bucket=null;
+  const finishBucket=() => {
+    if(!bucket) return;
+    segment.push([(bucket.first+bucket.last)/2,bucket.sum/bucket.count]);
+    bucket=null;
+  };
+  // End the whole segment at a gap, even within a half-hour bucket.
+  values.forEach((value,i) => {
+    if(!valid(value)) {
+      finishBucket();
+      if(segment.length) {segments.push(segment);segment=[];}
+      return;
+    }
+    const slot=Math.floor(points[i].time/(30*60*1000));
+    if(bucket?.slot !== slot) {
+      finishBucket();
+      bucket={slot,first:i,last:i,sum:0,count:0};
+    }
+    bucket.last=i;
+    bucket.sum+=value;
+    bucket.count++;
+  });
+  finishBucket();
+  if(segment.length) segments.push(segment);
+  return segments;
 }
 
 // Keep every measured point and stay within each pair's value range. Mixing a
@@ -43,28 +72,80 @@ export function HistoryCurve({segments,x,y,baseline}) {
   </>;
 }
 
+function chartTicks(numbers,{total,digits}) {
+  const min=Math.min(...numbers), max=Math.max(...numbers), precision=10**-digits;
+  const padding=total ? (max-Math.min(min,0))*.08 : Math.max((max-min)*.08,(Math.max(Math.abs(min),Math.abs(max))*.16-(max-min))/2);
+  const bottom=min < 0 ? min-padding : total ? 0 : Math.max(0,min-padding);
+  const rawStep=Math.max((max+padding-bottom)/4,precision);
+  const unit=10**Math.floor(Math.log10(rawStep));
+  const step=Math.max(precision,[1,2,2.5,5,10].map(n => n*unit).find(n => n >= rawStep) ?? 10*unit);
+  const first=Math.floor(bottom/step), last=Math.max(first+2,Math.ceil((max+padding)/step));
+  return Array.from({length:last-first+1},(_,i) => (first+i)*step);
+}
+
+function detailTrendPaths(values,x,y) {
+  const segments=[];let segment=[];
+  values.forEach((n,i) => {
+    if(valid(n)) segment.push([i,n]);
+    else if(segment.length) {segments.push(segment);segment=[];}
+  });
+  if(segment.length) segments.push(segment);
+  // Reduce visual density without joining runs across missing readings.
+  const stride=values.length >= 144 ? Math.ceil(values.length/72) : 1;
+  return segments.map(run => {
+    if(stride === 1 || run.length < 2) return {line:curvePath(run.map(([i,n]) => [x(i),y(n)])),point:run.length === 1 ? [x(run[0][0]),y(run[0][1])] : null};
+    const buckets=[];
+    for(const [i,n] of run) {
+      const slot=Math.floor(i/stride);
+      let bucket=buckets.at(-1);
+      if(bucket?.slot !== slot) {bucket={slot,first:i,last:i,sum:0,count:0,min:n,max:n};buckets.push(bucket);}
+      bucket.last=i;bucket.sum+=n;bucket.count++;bucket.min=Math.min(bucket.min,n);bucket.max=Math.max(bucket.max,n);
+    }
+    const first=buckets[0], last=buckets.at(-1);
+    const line=buckets.map(b => [(b.first+b.last)/2,b.sum/b.count]);
+    if(first.first < line[0][0]) line.unshift([first.first,line[0][1]]);
+    if(last.last > line.at(-1)[0]) line.push([last.last,line.at(-1)[1]]);
+    // Step edges enclose every plotted reading, including a spike at a bucket edge.
+    const edges=[first.first,...buckets.slice(1).map((b,i) => (b.first+buckets[i].last)/2),last.last];
+    const edge=key => buckets.flatMap((b,i) => [[x(edges[i]),y(b[key])],[x(edges[i+1]),y(b[key])]]);
+    const band=buckets.some(b => b.min < b.max) ? `M${[...edge('max'),...edge('min').reverse()].join(' L')} Z` : null;
+    return {line:curvePath(line.map(([i,n]) => [x(i),y(n)])),band};
+  });
+}
+
 function Trend({data,selected}) {
   const [hover,setHover]=useState(null), description=useId();
   useEffect(() => setHover(null),[data,selected.id]);
-  const values=data.points.map(p => p.values[selected.id]), numbers=values.filter(valid);
-  if(!numbers.length) return <div className="pm-trend-empty">{selected.id === 'cost' ? '暂无计费数据，请先设置电价并等待新的用电读数。' : selected.total ? '需要至少两次有效读数才能统计区间用量。' : '所选时段暂无有效读数，设备上线后会自动记录。'}</div>;
-  const domain=historyDomain(numbers), low=selected.total ? Math.min(0,domain.low) : domain.low, top=domain.high;
-  const x=i => 8+i/Math.max(1,values.length-1)*704, y=n => 200-(n-low)/(top-low)*184;
-  const paths=[];let segment=[];
-  values.forEach((n,i) => {if(valid(n)) segment.push([i,n]);else if(segment.length) {paths.push(segment);segment=[];}});
-  if(segment.length) paths.push(segment);
+  const plot=useMemo(() => {
+    const values=data.points.map(p => p.values[selected.id]), numbers=values.filter(valid);
+    if(!numbers.length) return null;
+    const ticks=chartTicks(numbers,selected), low=ticks[0], top=ticks.at(-1);
+    const x=i => 8+i/Math.max(1,values.length-1)*704, y=n => 200-(n-low)/(top-low)*184;
+    const paths=selected.total ? [] : detailTrendPaths(values,x,y), barWidth=Math.max(1,704/values.length*.65);
+    const marks=selected.total ? values.map((n,i) => valid(n) && <rect key={i} x={x(i)-barWidth/2} y={Math.min(y(n),y(0))} width={barWidth} height={Math.max(1,Math.abs(y(0)-y(n)))} rx="1.5" className="pm-trend-bar"/>) : <>
+      {paths.map(({band},i) => band && <path key={i} d={band} className="pm-trend-band"/>)}
+      {paths.map(({point,line},i) => point ? <circle key={i} cx={point[0]} cy={point[1]} r="2.5" className="pm-trend-dot"/> : <path key={i} d={line} className="pm-trend-line"/>)}
+    </>;
+    return {values,count:numbers.length,ticks,x,y,marks,hasBand:paths.some(p => p.band)};
+  },[data,selected]);
+  if(!plot) return <div className="pm-trend-empty">{selected.id === 'cost' ? '暂无计费数据，请先设置电价并等待新的用电读数。' : selected.total ? '需要至少两次有效读数才能统计区间用量。' : '所选时段暂无有效读数，设备上线后会自动记录。'}</div>;
+  const {values,count,ticks,x,y,marks,hasBand}=plot;
   const point=hover == null ? null : data.points[hover], number=point?.values[selected.id];
   const choose=e => {const box=e.currentTarget.getBoundingClientRect();setHover(Math.max(0,Math.min(values.length-1,Math.round(((e.clientX-box.left)/box.width*720-8)/704*(values.length-1)))));};
   return <div className="pm-trend" data-telemetry-chart>
-    <div className="pm-trend-info" id={description} aria-live="polite">{point ? <><time>{stamp(point.time,true)}</time><strong><ReadingValue value={number} metricId={selected.id} digits={selected.digits} unit={selected.unit}/></strong></> : <><span>{selected.total ? '每个区间的合计' : '每个区间的平均值'}</span><span>轻点或移动查看 · 方向键选择</span></>}</div>
-    <div className="pm-trend-plot"><div className="pm-trend-y"><span>{metric(top,selected.digits)}</span><span>{metric((top+low)/2,selected.digits)}</span><span>{metric(low,selected.digits)}</span></div><div className="pm-trend-canvas" tabIndex={0} role="group" aria-label={`${selected.label}趋势图`} aria-describedby={description} onPointerMove={choose} onPointerDown={choose} onPointerLeave={() => setHover(null)} onKeyDown={e => {if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) {e.preventDefault();setHover(i => e.key === 'Home' ? 0 : e.key === 'End' ? values.length-1 : Math.max(0,Math.min(values.length-1,(i ?? values.length-1)+(e.key === 'ArrowLeft' ? -1 : 1))));}}}>
-      <svg viewBox="0 0 720 216" preserveAspectRatio="none" role="img" aria-label={`${selected.label}，单位 ${selected.unit}，${numbers.length} 个区间有数据`}>
-        {[16,62,108,154,200].map(n => <line key={n} x1="0" x2="720" y1={n} y2={n} className="pm-trend-grid"/>)}
-        {selected.total ? values.map((n,i) => valid(n) && <rect key={i} x={x(i)-Math.max(1,704/values.length*.65)/2} y={y(n)} width={Math.max(1,704/values.length*.65)} height={Math.max(1,200-y(n))} className="pm-trend-bar"/>) : <HistoryCurve segments={paths} x={x} y={y} baseline={200}/>}
-        {point && <><line x1={x(hover)} x2={x(hover)} y1="8" y2="204" className="pm-trend-cursor"/>{valid(number) && <circle cx={x(hover)} cy={y(number)} r="4" className="pm-trend-dot"/>}</>}
+    <div className="pm-trend-info">
+      <div className="pm-trend-legend"><span data-key={selected.total ? 'bar' : 'line'}>{selected.total ? '区间合计' : '平均值'}</span>{hasBand && <span data-key="band">高低范围</span>}</div>
+      <div className="pm-trend-readout" id={description} aria-live="polite">{point && <><time dateTime={new Date(point.time).toISOString()}>{stamp(point.time,true)}</time><strong>{valid(number) ? <ReadingValue value={number} metricId={selected.id} digits={selected.digits} unit={selected.unit}/> : '无读数'}</strong></>}</div>
+    </div>
+    <div className="pm-trend-plot"><div className="pm-trend-y" aria-hidden="true">{ticks.map(n => <span key={n} style={{top:`${y(n)/2.16}%`}}>{Number(metric(n,selected.digits))}</span>)}</div><div className="pm-trend-canvas" tabIndex={0} role="group" aria-label={`${selected.label}趋势图`} aria-describedby={description} onPointerMove={choose} onPointerDown={choose} onPointerLeave={e => {if(e.pointerType !== 'touch') setHover(null);}} onKeyDown={e => {if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) {e.preventDefault();setHover(i => e.key === 'Home' ? 0 : e.key === 'End' ? values.length-1 : Math.max(0,Math.min(values.length-1,(i ?? values.length-1)+(e.key === 'ArrowLeft' ? -1 : 1))));}}}>
+      <svg viewBox="0 0 720 216" preserveAspectRatio="none" role="img" aria-label={`${selected.label}，单位 ${selected.unit}，${count} 个区间有数据`}>
+        {ticks.map(n => <line key={n} x1="0" x2="720" y1={y(n)} y2={y(n)} className="pm-trend-grid"/>)}
+        {marks}
+        {point && <line x1={x(hover)} x2={x(hover)} y1="8" y2="204" className="pm-trend-cursor"/>}
       </svg>
+      {point && valid(number) && <span aria-hidden="true" className="pm-trend-marker" style={{left:`${x(hover)/7.2}%`,top:`${y(number)/2.16}%`}}/>}
     </div></div>
-    <div className="pm-trend-x">{[0,.5,1].map((part,i) => {const at=data.points[Math.round((data.points.length-1)*part)].time;return <span key={i}>{data.range === '24h' ? clock(at) : stamp(at)}</span>;})}</div>
+    <div className="pm-trend-x" aria-hidden="true">{[0,.25,.5,.75,1].map((part,i) => {const at=data.points[Math.round((data.points.length-1)*part)].time;return <span key={i}>{data.range === '24h' ? clock(at) : stamp(at)}</span>;})}</div>
   </div>;
 }
 

@@ -39,6 +39,8 @@ def normalize_archive(raw, payload=None):
 def normalize(source, destination):
     raw = pathlib.Path(source).read_bytes()
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:*") as archive:
+        if any(name.startswith("META-INF/") for name in archive.getnames()):
+            raise ValueError("Refusing to modify a signed FPK; normalize permissions before signing")
         payload = archive.extractfile("app.tgz").read()
     payload = normalize_archive(payload)
     pathlib.Path(destination).write_bytes(normalize_archive(raw, payload))

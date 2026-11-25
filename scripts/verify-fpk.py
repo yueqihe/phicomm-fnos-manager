@@ -1,5 +1,6 @@
 """Inspect a native manager FPK without executing its installation scripts."""
 import argparse
+import base64
 import hashlib
 import io
 import json
@@ -7,6 +8,47 @@ import pathlib
 import re
 import tarfile
 import struct
+import ssl
+
+
+def verify_signature_metadata(archive, names, required=False, certificate=None):
+    metadata = {"META-INF/checksums.json", "META-INF/developer.crt", "META-INF/signature.json"}
+    present = names & metadata
+    if not present:
+        if required:
+            raise ValueError("A signed FPK is required")
+        return
+    if present != metadata or {name for name in names if name.startswith("META-INF/")} != metadata:
+        raise ValueError("Incomplete or unexpected signature metadata")
+    checksums = json.load(archive.extractfile("META-INF/checksums.json"))
+    signature = json.load(archive.extractfile("META-INF/signature.json"))
+    if checksums.get("version") != 1 or checksums.get("hash") != "sha256":
+        raise ValueError("Unsupported signed checksum format")
+    if signature.get("version") != 1 or signature.get("algorithm") != "RSA-SHA256":
+        raise ValueError("Unsupported package signature format")
+    signed = {}
+    for entry in checksums["files"]:
+        name = entry["path"]
+        if name in signed:
+            raise ValueError(f"Duplicate signed path: {name}")
+        signed[name] = entry["sha256"]
+    expected = {entry.name for entry in archive.getmembers() if entry.isfile() and not entry.name.startswith("META-INF/")}
+    if set(signed) != expected:
+        raise ValueError("Signed checksum list does not cover all package files")
+    for name, digest in signed.items():
+        if hashlib.sha256(archive.extractfile(name).read()).hexdigest() != digest:
+            raise ValueError(f"Signed checksum does not match: {name}")
+    pem = archive.extractfile("META-INF/developer.crt").read().decode("ascii")
+    der = ssl.PEM_cert_to_DER_cert(pem)
+    if signature["certificate_sha256"] != hashlib.sha256(der).hexdigest():
+        raise ValueError("Signing certificate fingerprint does not match")
+    if certificate and der != ssl.PEM_cert_to_DER_cert(pathlib.Path(certificate).read_text(encoding="ascii")):
+        raise ValueError("FPK was not signed with the requested developer certificate")
+    if len(base64.b64decode(signature["signature"], validate=True)) < 256:
+        raise ValueError("Invalid RSA signature size")
+    # This checks signed content and certificate identity. fnpack creates the RSA
+    # signature; fnOS performs trusted-certificate and cryptographic verification.
+    print("Signature metadata: complete SHA256 file coverage and matching developer certificate")
 
 
 def verify_static_elf(raw, platform):
@@ -41,9 +83,13 @@ def check_members(archive):
     return names
 
 
-def verify(file, extract=None, expected_platform=None):
+def verify(file, extract=None, expected_platform=None, require_signature=False, certificate=None):
     with tarfile.open(file, "r:*") as archive:
         names = check_members(archive)
+        for name in names:
+            if re.search(r"\.(?:key|pem|p12|pfx|csr)$", name, re.I):
+                raise ValueError(f"Signing credential must never be packaged: {name}")
+        verify_signature_metadata(archive, names, require_signature, certificate)
         required = {"app.tgz", "manifest", "ICON.PNG", "ICON_256.PNG", "cmd/main", "cmd/common", "config/privilege", "config/resource", "wizard/install"}
         if not required.issubset(names):
             raise ValueError(f"Missing files: {required - names}")
@@ -102,5 +148,7 @@ if __name__ == "__main__":
     parser.add_argument("file")
     parser.add_argument("--extract")
     parser.add_argument("--platform", choices=["all", "x86", "arm"], help="Require this package target")
+    parser.add_argument("--require-signature", action="store_true", help="Require signed metadata and verify its content checksums")
+    parser.add_argument("--certificate", help="Require the embedded signing certificate to match this external certificate")
     args = parser.parse_args()
-    verify(args.file, args.extract, args.platform)
+    verify(args.file, args.extract, args.platform, args.require_signature, args.certificate)

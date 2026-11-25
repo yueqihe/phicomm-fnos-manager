@@ -27,3 +27,16 @@ __pycache__/
 *.sqlite-wal
 *.sqlite-shm
 secrets.key
+
+# Build outputs and developer signing material stay on the build computer.
+*.fpk
+*.fpk.sha256
+*.key
+*.crt
+*.cer
+*.csr
+*.pem
+*.p12
+*.pfx
+*.sig
+/META-INF/

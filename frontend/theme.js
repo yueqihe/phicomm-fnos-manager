@@ -9,6 +9,7 @@ const systemTheme=() => matchMedia('(prefers-color-scheme: dark)').matches ? 'da
 function apply(mode) {
   document.documentElement.dataset.theme=mode === 'system' ? systemTheme() : mode;
 }
+document.documentElement.toggleAttribute('data-embedded',window.self !== window.top);
 apply(readPreference());
 
 export function useTheme() {

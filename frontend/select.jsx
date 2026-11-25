@@ -1,5 +1,5 @@
 import React, {useEffect, useId, useLayoutEffect, useRef, useState} from 'react';
-import {Check, ChevronDown} from 'lucide-react';
+import {Icon} from './icons.jsx';
 
 const textOf=children => React.Children.toArray(children).map(child => React.isValidElement(child) ? textOf(child.props.children) : String(child)).join('');
 
@@ -101,10 +101,10 @@ export function Select({children,value='',onChange,name,id:providedId,disabled=f
 
   const common={...props,id,ref:trigger,disabled,role:'combobox','aria-haspopup':'listbox','aria-expanded':open,'aria-controls':open ? menuId : undefined,'aria-activedescendant':open && shown[active] ? `${menuId}-${active}` : undefined,'data-value':String(value),onKeyDown:keyDown,onBlur:e => {if(!root.current?.contains(e.relatedTarget)) setOpen(false);}};
   return <div ref={root} className={`pm-select${editable ? ' pm-select-editable' : ''}`}>
-    {editable ? <><input {...common} name={name} className={`pm-input pm-select-trigger ${className}`} value={value} autoComplete="off" aria-autocomplete="list" onFocus={expand} onClick={() => {if(!open) expand();}} onChange={e => {setFiltering(true);setActive(0);setOpen(true);onChange?.(e);}}/><ChevronDown className="pm-select-arrow" aria-hidden="true"/></> : <button {...common} type="button" className={`pm-input pm-select-trigger ${className}`} onClick={() => open ? setOpen(false) : expand()}><span className="pm-select-value">{selected?.label || '请选择'}</span><ChevronDown aria-hidden="true"/></button>}
+    {editable ? <><input {...common} name={name} className={`pm-input pm-select-trigger ${className}`} value={value} autoComplete="off" aria-autocomplete="list" onFocus={expand} onClick={() => {if(!open) expand();}} onChange={e => {setFiltering(true);setActive(0);setOpen(true);onChange?.(e);}}/><Icon name="chevron" className="pm-select-arrow"/></> : <button {...common} type="button" className={`pm-input pm-select-trigger ${className}`} onClick={() => open ? setOpen(false) : expand()}><span className="pm-select-value">{selected?.label || '请选择'}</span><Icon name="chevron"/></button>}
     {!editable && name && <input type="hidden" name={name} value={value} disabled={disabled}/>}
     {open && <div ref={menu} id={menuId} role="listbox" aria-labelledby={id} popover="manual" className="pm-select-menu" onMouseDown={e => e.preventDefault()}>
-      {shown.length ? shown.map((option,index) => <div key={option.value} id={`${menuId}-${index}`} role="option" aria-selected={option.value === String(value)} aria-disabled={option.disabled || undefined} data-option-index={index} data-value={option.value} data-active={active === index || undefined} className="pm-select-option" title={option.label} onPointerMove={e => {if(e.pointerType === 'mouse' && !option.disabled) setActive(index);}} onClick={e => {e.preventDefault();e.stopPropagation();choose(option);}}><span>{option.label}</span>{option.value === String(value) && <Check aria-hidden="true"/>}</div>) : <div className="pm-select-empty" role="status">输入新的空间名称</div>}
+      {shown.length ? shown.map((option,index) => <div key={option.value} id={`${menuId}-${index}`} role="option" aria-selected={option.value === String(value)} aria-disabled={option.disabled || undefined} data-option-index={index} data-value={option.value} data-active={active === index || undefined} className="pm-select-option" title={option.label} onPointerMove={e => {if(e.pointerType === 'mouse' && !option.disabled) setActive(index);}} onClick={e => {e.preventDefault();e.stopPropagation();choose(option);}}><span>{option.label}</span>{option.value === String(value) && <Icon name="check"/>}</div>) : <div className="pm-select-empty" role="status">输入新的空间名称</div>}
     </div>}
   </div>;
 }

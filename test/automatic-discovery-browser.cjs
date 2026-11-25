@@ -26,7 +26,7 @@ const assert=require('node:assert/strict');
   const candidate=(i,extra={})=>({id:`${fixtures[i].model.toLowerCase()}-${fixtures[i].mac}`,model:fixtures[i].model,mac:fixtures[i].mac,address:fixtures[i].address,added:false,...extra});
   // Fixture objects expose their protocol state as the source of identity.
   fixtures.forEach(f=>{f.model=f.state.model.toUpperCase();f.mac=f.state.device_id;});
-  await fetch(url+'api/devices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'TC1',method:'lan',address:fixtures[0].address,name:'已有排插'})});
+  await fetch(url+'api/devices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'TC1',method:'lan',address:fixtures[0].address,name:'已有排插',room:'客厅'})});
   const context=await browser.newContext({viewport:{width:1440,height:1000},colorScheme:'light'}),page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   let snapshot={state:'complete',interfaces:[],devices:[candidate(0,{added:true}),candidate(1),candidate(2),{...candidate(2),id:'m1-deleted',model:'M1',ignored:true}],protectedAddresses:[]};
@@ -35,7 +35,14 @@ const assert=require('node:assert/strict');
    requests.push({method:route.request().method(),client:new URL(route.request().url()).searchParams.get('client')});
    return route.fulfill(fail ? {status:503,json:{error:'暂时无法扫描'}} : {json:snapshot});
   });
-  await context.route('**/api/devices',route=>deny && route.request().method()==='GET' ? route.fulfill({status:401,json:{error:'请重新登录'}}) : route.continue());
+  let refreshGate;
+  await context.route('**/api/devices',async route=>{
+   if(route.request().method()==='GET') {
+    if(deny) return route.fulfill({status:401,json:{error:'请重新登录'}});
+    if(refreshGate) await refreshGate;
+   }
+   await route.continue();
+  });
   await context.route('**/api/discovery',route=>route.fulfill({json:{...snapshot,state:'complete',devices:[]}}));
   await page.clock.install();await page.clock.pauseAt(new Date(Date.now()+1000));
   await page.goto(url);
@@ -71,8 +78,22 @@ const assert=require('node:assert/strict');
   assert.equal(await add.getByLabel('设备内网地址',{exact:true}).inputValue(),fixtures[1].address);
   assert.equal(await add.getByRole('button',{name:'扫描设备',exact:true}).count(),0,'confirmed discovery needs no second scan form');
   await page.keyboard.press('Escape');await add.waitFor({state:'hidden'});
+  await page.setViewportSize({width:900,height:560});
+  await page.getByRole('button',{name:'列表',exact:true}).click();
+  await page.getByRole('button',{name:'TC1',exact:true}).click();
   await notice.getByRole('button',{name:'添加 M1 aabbcc000802',exact:true}).click();
-  await page.locator('[form="add-form"]').click();await add.waitFor({state:'hidden'});
+  let releaseRefresh;refreshGate=new Promise(resolve=>{releaseRefresh=resolve;});
+  try {
+   await page.locator('[form="add-form"]').click();await add.waitFor({state:'hidden'});
+   const addedRow=page.locator('[data-device="m1-aabbcc000802"]');
+   await addedRow.waitFor();
+   assert.equal(await addedRow.getAttribute('aria-pressed'),'true','new device is selected even while refreshing');
+   assert.equal(await page.getByRole('button',{name:'全部设备',exact:true}).getAttribute('aria-pressed'),'true');
+   await page.getByRole('button',{name:'空间',exact:true}).click();
+   const card=page.getByRole('region',{name:'未分组设备'}).locator('[data-card-id="m1-aabbcc000802"]');
+   await card.waitFor();
+   await until(()=>card.evaluate(el=>{const rect=el.getBoundingClientRect(),top=document.querySelector('.pm-top').getBoundingClientRect().bottom;return rect.top>=top&&rect.bottom<=innerHeight+1;}),'switching to cards reveals the added device');
+  } finally {refreshGate=null;releaseRefresh();}
   await notice.getByText('发现 1 台新设备，是否添加？',{exact:true}).waitFor();
   assert.equal((await (await fetch(url+'api/devices')).json()).devices.length,2);
   await notice.getByRole('button',{name:'暂不添加 DAIKIN aabbcc000803',exact:true}).click();
@@ -101,6 +122,7 @@ const assert=require('node:assert/strict');
   fail=true;expected=starts()+1;await page.clock.fastForward(60000);await until(()=>starts()===expected,'failed scan');
   assert.equal(await page.getByText('暂时无法扫描',{exact:true}).count(),0,'background failure should not interrupt controls');
   fail=false;expected=starts()+1;await page.clock.fastForward(60000);await until(()=>starts()===expected,'retry next minute');
+  await page.waitForLoadState('networkidle');
   deny=true;await page.clock.fastForward(5000);
   await page.getByText('请使用飞牛 NAS 管理员账号登录，并从桌面重新打开应用。',{exact:true}).waitFor();
   expected=starts();await page.clock.fastForward(120000);assert.equal(starts(),expected,'expired login must stop new-device discovery');

@@ -1,7 +1,22 @@
 import React, {useEffect, useRef, useState} from 'react';
-import {api, when} from './ui.jsx';
+import {api, when, UpdateDot} from './ui.jsx';
 
 const ExternalLink = ({href,children,className=''}) => <a className={className} href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+
+export function AppFooter({updateCheck,onAbout}) {
+  const [about,setAbout]=useState(null);
+  useEffect(() => {
+    const controller=new AbortController();
+    api('about',{signal:controller.signal}).then(info => {if(!controller.signal.aborted) setAbout(info);}).catch(() => {});
+    return () => controller.abort();
+  },[]);
+  const version=about?.version || updateCheck.update?.currentVersion, available=updateCheck.update?.status === 'update';
+  return <footer className="pm-footer" aria-label="应用信息">
+    <ExternalLink className="pm-footer-author" href="https://github.com/yueqihe">情深深雨蒙蒙</ExternalLink>
+    <span aria-hidden="true">·</span>
+    <button className="pm-footer-version" type="button" aria-label={`关于 IoT 设备管理${version ? `，当前版本 ${version}` : ''}`} aria-description={available ? '有新版本可更新' : undefined} aria-haspopup="dialog" title={available ? '有新版本，点击查看' : '关于 IoT 设备管理'} onClick={onAbout}>{version ? `v${version}` : '读取版本…'}{available && <UpdateDot/>}</button>
+  </footer>;
+}
 
 export function AboutPanel({updateCheck}) {
   const [about,setAbout]=useState(null), [infoError,setInfoError]=useState(''), [loading,setLoading]=useState(true);

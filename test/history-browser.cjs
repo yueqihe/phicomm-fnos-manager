@@ -6,6 +6,7 @@ const {tmpdir}=require('node:os');
 const path=require('node:path');
 const assert=require('node:assert/strict');
 const {chooseOption,optionCount}=require('./select-helpers.cjs');
+const {assertDarkGlass}=require('./dialog-appearance.cjs');
 (async()=>{
  const {httpDevice,freePort,until}=await import('./fixtures.js');
  const root=path.resolve(__dirname,'..'), directory=mkdtempSync(path.join(tmpdir(),'pm-history-browser-'));
@@ -42,11 +43,19 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
   assert.equal(await tile.locator('.pm-tile-count').count(),0);
   assert.equal(await tile.locator('.pm-tile-energy-reading').textContent(),'1.23度');
   await page.locator('.pm-tile').filter({has:page.locator('[data-open-control="tc1-aabbcc000304"]')}).getByText('等待功率记录',{exact:true}).waitFor();
+  assert.equal(await tile.getByRole('group',{name:'插口状态'}).locator('[data-outlet-state]').count(),6);
   for(const width of [320,390,700,768,900,1440]) {
    await page.setViewportSize({width,height:900});
-   const row=await tile.locator('.pm-tile-primary').evaluate(el=>{const name=el.querySelector('.pm-tile-name').getBoundingClientRect(),readingEl=el.querySelector('.pm-tile-power-reading'),reading=readingEl.getBoundingClientRect(),watts=el.querySelector('.pm-tile-watts').getBoundingClientRect(),energy=el.querySelector('.pm-tile-energy-reading').getBoundingClientRect();return {belowName:reading.top>=name.bottom+8,leftAligned:Math.abs(name.left-reading.left)<1,rightAligned:Math.abs(reading.right-el.getBoundingClientRect().right)<1,sameRow:Math.abs((name.top+name.bottom)/2-(reading.top+reading.bottom)/2)<1,fontMatches:getComputedStyle(readingEl).fontSize===getComputedStyle(document.querySelector('.pm-tile:not(.pm-tile-tc1) .pm-tile-value')).fontSize,powerWithEnergy:Math.abs(watts.bottom-energy.bottom)<8,overflow:document.documentElement.scrollWidth>innerWidth};});
-   const mobile=width<=700;
-   assert.deepEqual(row,{belowName:!mobile,leftAligned:!mobile,rightAligned:mobile,sameRow:mobile,fontMatches:true,powerWithEnergy:true,overflow:false});
+   const layout=await tile.evaluate(el=>{
+    const rect=selector=>el.querySelector(selector).getBoundingClientRect();
+    const identity=rect('.pm-tile-identity'),actions=rect('.pm-tile-actions'),head=rect('.pm-tile-head');
+    const reading=rect('.pm-tile-power-reading'),outlets=rect('.pm-tile-outlets'),history=rect('.pm-history-sparkline');
+    const watts=rect('.pm-tile-watts'),energy=rect('.pm-tile-energy-reading');
+    return {headerFits:identity.right<=actions.left,order:head.bottom<=reading.top&&reading.bottom<=outlets.top&&outlets.bottom<=history.top,
+      aligned:Math.abs(reading.left-outlets.left)<1&&Math.abs(reading.left-history.left)<1,
+      separateReadings:watts.right<=energy.left&&Math.abs(watts.bottom-energy.bottom)<1,overflow:document.documentElement.scrollWidth>innerWidth};
+   });
+   assert.deepEqual(layout,{headerFits:true,order:true,aligned:true,separateReadings:true,overflow:false},`Card layout at ${width}px`);
   }
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(output,'card-power-24h-mobile.png'),fullPage:true});
   await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:path.join(output,'card-power-24h-desktop.png'),fullPage:true});
@@ -61,8 +70,23 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
   await chart.focus();await chart.press('End');await chart.press('ArrowLeft');
   await dialog.locator('.pm-trend-info strong').waitFor();
   assert.ok(await dialog.locator('.pm-trend-line').count()>=2,'offline gap must split the curve');
+  const history=await (await fetch(`${url}api/devices/tc1-aabbcc000301/data-history?range=24h`)).json();
+  const gap=history.points.findIndex((p,i)=>p.values.power==null&&i>0&&history.points[i-1].values.power!=null);
+  const peak=history.points.reduce((best,p,i)=>p.values.power!=null&&p.values.power>(history.points[best]?.values.power??-Infinity)?i:best,-1);
+  const bands=await chart.locator('.pm-trend-band').evaluateAll(els=>els.map(el=>{const {x,width}=el.getBBox();return [x,x+width];}));
+  const chartX=i=>8+i/(history.points.length-1)*704;
+  assert.ok(gap>0&&bands.some(([,end])=>end<chartX(gap))&&bands.some(([start])=>start>chartX(gap)));
+  assert.ok(bands.every(([start,end])=>start>chartX(gap)||end<chartX(gap)),'the high/low band must also break at offline periods');
+  const bounds=await chart.boundingBox();
+  const inspect=i=>page.mouse.move(bounds.x+bounds.width*chartX(i)/720,bounds.y+bounds.height/2);
+  await inspect(gap);await dialog.getByText('无读数',{exact:true}).waitFor();
+  assert.equal(await chart.locator('.pm-trend-marker').count(),0);
+  await inspect(peak);await chart.locator('.pm-trend-marker').waitFor();
+  assert.equal(await dialog.locator('.pm-trend-readout .pm-live-reading').evaluate(el=>el.firstChild.nodeValue),history.points[peak].values.power.toFixed(1));
+  await dialog.screenshot({path:path.join(output,'history-power-detail.png')});
   await chooseOption(dialog.getByLabel('数据指标',{exact:true}),'energy');
   await dialog.getByRole('group',{name:'用电量趋势图',exact:true}).waitFor();assert.ok(await dialog.locator('.pm-trend-bar').count()>1);
+  assert.equal(await dialog.locator('.pm-trend-band').count(),0);
   const downloadEvent=page.waitForEvent('download');await dialog.getByRole('button',{name:'导出 CSV',exact:true}).click();const download=await downloadEvent;
   assert.equal(download.suggestedFilename(),'TC1-aabbcc000301-24h.csv');
   const csv=readFileSync(await download.path(),'utf8');assert.ok(csv.includes('功率（W）')&&csv.includes('用电量（度）')&&csv.includes('预估花费（元）'));assert.ok(csv.split('\r\n').length>100);
@@ -119,7 +143,7 @@ const {chooseOption,optionCount}=require('./select-helpers.cjs');
   }
   // History still works after reload, including dark colors and transient failures.
   await page.evaluate(()=>localStorage.setItem('pm-theme','dark'));await page.reload();await tile.getByRole('button',{name:'客厅排插最近24小时功率历史',exact:true}).click();await dialog.locator('[data-telemetry-chart]').waitFor();
-  assert.equal(await dialog.evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(36, 38, 41)');
+  await assertDarkGlass(dialog);
   await page.setViewportSize({width:1440,height:1000});await page.screenshot({path:path.join(output,'history-dark-desktop.png'),fullPage:true});
   await dialog.getByRole('button',{name:'关闭历史记录',exact:true}).click();await tile.locator('[data-power-sparkline]').waitFor();
   await page.setViewportSize({width:390,height:844});await page.screenshot({path:path.join(output,'card-power-24h-dark.png'),fullPage:true});

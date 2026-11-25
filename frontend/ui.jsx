@@ -1,14 +1,13 @@
 import React, {useId, useLayoutEffect, useRef} from 'react';
-import {Layers2, Settings2, X, Plus, List, LayoutGrid, PlugZap, AirVent, Wind, Unplug, ArrowUpRight, Pencil} from 'lucide-react';
+import {Icon} from './icons.jsx';
 import {Select} from './select.jsx';
-export {Select};
+export {Icon, Select};
 
-const icons = {layers: Layers2, settings: Settings2, x: X, plus: Plus, list: List, grid: LayoutGrid, plug: PlugZap, air: AirVent, wind: Wind, unplug: Unplug, arrow: ArrowUpRight, edit: Pencil};
-export function Icon({name}) { const Component = icons[name]; return <Component size={17} strokeWidth={1.6} aria-hidden="true"/>; }
 export const isMeteredPlug = device => ['TC1','S30-V1B'].includes(device.model);
 export const outletCount = device => device.model === 'S30-V1B' ? 1 : 6;
 export const isAirMonitor = device => ['M1','DAIKIN'].includes(device.model);
-export function DeviceIcon({device}) { return <Icon name={isMeteredPlug(device) ? 'plug' : isAirMonitor(device) ? 'air' : 'wind'}/>; }
+const modelIcons={TC1:'plug','S30-V1B':'power',DAIKIN:'gauge',M1:'air',A1:'wind'};
+export function DeviceIcon({device}) {return <Icon name={modelIcons[device.model] || 'plug'} data-model={device.model} data-icon-online={device.online}/>;}
 export function Dot({online}) { return <span className={`pm-dot${online ? '' : ' pm-dot-off'}`}/>; }
 export function UpdateDot() { return <span className="pm-update-dot" aria-hidden="true"/>; }
 export function DeviceSettingsButton({device,onOpen}) {

@@ -102,8 +102,15 @@ module.exports=async function testS30(page,fixtures,output) {
  await page.reload();await page.getByRole('button',{name:'S30-V1B',exact:true}).click();
  await tile.getByRole('button',{name:`${name}最近24小时电流历史`,exact:true}).waitFor();
  await page.getByRole('button',{name:'列表',exact:true}).click();
- assert.equal(await page.locator('.pm-detail [data-action="outlet.set"]').count(),1,'list view must share the single power switch');
+ const quick=page.locator('.pm-panel').filter({has:page.getByRole('heading',{name:/快速控制/})});
+ const master=quick.getByRole('switch',{name:`${name}总开关`,exact:true});
+ assert.equal(await quick.locator('[data-action="outlet.set"]').count(),1,'list view must keep a single power switch');
+ assert.equal(await quick.getByRole('heading',{name,exact:true}).count(),0,'the name is already shown in the list');
  assert.equal(await page.locator('.pm-detail .pm-outlets,.pm-detail .pm-outlet').count(),0);
  assert.ok((await page.locator('.pm-detail').textContent()).includes('电压230.5V'));
+ const wasOn=(await master.getAttribute('aria-checked')) === 'true';
+ await master.click();
+ await until(async()=>await master.getAttribute('aria-checked')===String(!wasOn));
+ assert.equal(device.state.socket_states[0],Number(!wasOn));
  console.log('S30 UI passed: one power switch, metering, power-on policies, failed drafts, device-side sync, legacy firmware, five chart choices, persistence and 320–1440px.');
 };
